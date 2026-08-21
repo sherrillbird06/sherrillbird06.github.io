@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Vocab Trainer — Jaylen Sherrill</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#E8EFF8; --sidebar:#0C1119; --paper:#05080D; --card:#0C1119;
+  --line:#1B2432; --line-soft:#141B26; --slate:#8496AC; --slate-light:#5F7085;
+  --accent:#4D7CFF; --accent-soft:rgba(77,124,255,.10);
+  --green:#34D399; --green-soft:rgba(52,211,153,.10);
+  --amber:#FBBF24; --amber-soft:rgba(251,191,36,.10);
+  --red:#F87171; --red-soft:rgba(248,113,113,.10);
+  --cyan:#22D3EE; --cyan-soft:rgba(34,211,238,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em;}
+button{font-family:inherit;cursor:pointer;border:none;}
+a{color:inherit;}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px 60px;}
+
+header{background:var(--sidebar);color:#fff;padding:26px 0 22px;margin-bottom:22px;}
+header .wrap{padding-bottom:0;}
+.back{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8FA3BE;text-decoration:none;display:inline-block;margin-bottom:12px;}
+.back:hover{color:#fff;}
+header h1{font-size:24px;margin-bottom:6px;}
+header p{color:var(--slate);font-size:14px;max-width:580px;}
+
+.why{
+  background:var(--accent-soft);border:1px solid rgba(77,124,255,.22);border-radius:11px;
+  padding:15px 17px;font-size:13.8px;color:var(--slate);margin-bottom:20px;
+}
+.why b{font-family:'Space Grotesk',sans-serif;color:var(--ink);}
+
+/* mode toggle */
+.modes{display:flex;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:5px;margin-bottom:16px;}
+.mode-btn{
+  flex:1;padding:9px;border-radius:8px;background:transparent;font-size:13.5px;font-weight:600;
+  color:var(--slate);transition:all .15s ease;
+}
+.mode-btn.active{background:linear-gradient(140deg,var(--accent),#3D68E8);color:#fff;}
+
+/* filter chips */
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.chip{
+  font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 11px;border-radius:20px;
+  background:var(--card);border:1px solid var(--line);color:var(--slate);transition:all .14s;
+}
+.chip:hover{border-color:var(--accent);}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+.stat .n{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;line-height:1.1;}
+.stat .l{font-family:'JetBrains Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--slate-light);margin-top:2px;}
+.stat.g .n{color:var(--green);}
+.stat.r .n{color:var(--red);}
+
+/* ===== FLASHCARD ===== */
+.card-stage{perspective:1400px;margin-bottom:16px;}
+.flip{
+  position:relative;width:100%;min-height:270px;
+  transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,.2,.2,1);cursor:pointer;
+}
+.flip.flipped{transform:rotateY(180deg);}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:30px 28px;display:flex;flex-direction:column;justify-content:center;
+}
+.face.back{transform:rotateY(180deg);background:linear-gradient(155deg,#101725,#0A0F17);color:var(--ink);border-color:rgba(77,124,255,.32);}
+.face-cat{
+  font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--slate-light);margin-bottom:12px;
+}
+.face.back .face-cat{color:#8FA3BE;}
+.face .term{font-family:'Space Grotesk',sans-serif;font-size:29px;font-weight:700;margin-bottom:8px;line-height:1.15;}
+.face .expand{font-size:14px;color:var(--slate-light);font-family:'JetBrains Mono',monospace;}
+.face.back .def{font-size:15.5px;line-height:1.6;color:var(--ink);margin-bottom:14px;}
+.face.back .plain{
+  font-size:13.5px;color:var(--slate);border-left:2px solid var(--accent);padding-left:12px;font-style:italic;
+}
+.tap-hint{
+  position:absolute;bottom:16px;left:0;right:0;text-align:center;
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--slate-light);letter-spacing:.05em;
+}
+.face.back .tap-hint{color:var(--slate-light);}
+
+.card-nav{display:flex;gap:8px;margin-bottom:12px;}
+.nav-btn{
+  flex:1;padding:12px;border-radius:10px;background:var(--card);border:1px solid var(--line);
+  font-size:13.5px;font-weight:600;color:var(--ink);transition:all .14s;
+}
+.nav-btn:hover{border-color:#C6D0DE;background:var(--paper);}
+.nav-btn.know{background:var(--green-soft);border-color:rgba(52,211,153,.3);color:var(--green);}
+.nav-btn.know:hover{background:rgba(52,211,153,.18);}
+.nav-btn.dunno{background:var(--amber-soft);border-color:rgba(251,191,36,.3);color:var(--amber);}
+.nav-btn.dunno:hover{background:rgba(251,191,36,.18);}
+
+.counter{text-align:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--slate-light);margin-bottom:14px;}
+
+/* ===== QUIZ ===== */
+.quiz-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;}
+.q-cat{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--slate-light);margin-bottom:10px;}
+.q-prompt{font-size:16px;font-weight:600;margin-bottom:6px;font-family:'Space Grotesk',sans-serif;}
+.q-sub{font-size:13.5px;color:var(--slate-light);margin-bottom:18px;}
+.q-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.q-opt{
+  text-align:left;padding:12px 15px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);font-size:14px;color:var(--ink);transition:all .14s;line-height:1.45;
+}
+.q-opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft);}
+.q-opt.right{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.q-opt.wrong{background:var(--red-soft);border-color:var(--red);color:var(--red);}
+.q-opt.dim{opacity:.45;}
+.q-opt:disabled{cursor:default;}
+.q-fb{display:none;border-radius:10px;padding:13px 15px;font-size:13.8px;margin-bottom:14px;border:1px solid;}
+.q-fb.show{display:block;}
+.q-fb.good{background:var(--green-soft);border-color:rgba(52,211,153,.3);color:var(--green);}
+.q-fb.bad{background:var(--red-soft);border-color:rgba(248,113,113,.3);color:var(--red);}
+.q-fb b{font-family:'Space Grotesk',sans-serif;display:block;margin-bottom:3px;}
+.q-next{display:none;width:100%;padding:12px;background:linear-gradient(140deg,var(--accent),#3D68E8);color:#fff;border-radius:9px;font-weight:600;font-size:14px;}
+.q-next.show{display:block;}
+.q-next:hover{background:var(--accent);}
+
+/* glossary */
+.gloss{display:none;}
+.gloss.show{display:block;}
+.g-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 17px;margin-bottom:9px;}
+.g-item .g-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+.g-item h3{font-size:15.5px;}
+.g-item .g-cat{font-family:'JetBrains Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--slate-light);background:var(--paper);border:1px solid var(--line-soft);padding:2px 7px;border-radius:20px;}
+.g-item .g-def{font-size:14px;color:var(--slate);margin-bottom:7px;}
+.g-item .g-plain{font-size:13px;color:var(--slate-light);font-style:italic;border-left:2px solid var(--line);padding-left:11px;}
+
+.hidden{display:none !important;}
+.reset{background:none;color:var(--slate-light);font-size:12px;text-decoration:underline;display:block;margin:16px auto 0;}
+
+@media(max-width:600px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .face .term{font-size:24px;}
+  .flip{min-height:290px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="back" href="index.html">← BACK TO CONSOLE</a>
+    <h1>IT Vocab Trainer</h1>
+    <p>28 terms every entry-level IT person gets asked about — in plain English, not textbook phrasing.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="why">
+    <b>Why I built this:</b> I'm studying for CompTIA Network+ and paper flashcards weren't sticking for me. So I built a version that tracks which terms I keep missing. A few classmates were stuck on the same vocabulary, so I cleaned it up and made it public — free, no signup, works on a phone.
+  </div>
+
+  <div class="modes">
+    <button class="mode-btn active" data-mode="flash">Flashcards</button>
+    <button class="mode-btn" data-mode="quiz">Quiz</button>
+    <button class="mode-btn" data-mode="gloss">Glossary</button>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <!-- ===== FLASHCARD MODE ===== -->
+  <div id="flashMode">
+    <div class="stats">
+      <div class="stat g"><div class="n" id="fKnown">0</div><div class="l">Know it</div></div>
+      <div class="stat r"><div class="n" id="fReview">0</div><div class="l">Review</div></div>
+      <div class="stat"><div class="n" id="fLeft">0</div><div class="l">Remaining</div></div>
+    </div>
+
+    <div class="card-stage">
+      <div class="flip" id="flipCard">
+        <div class="face front">
+          <div class="face-cat" id="fCat">CATEGORY</div>
+          <div class="term" id="fTerm">Term</div>
+          <div class="expand" id="fExpand"></div>
+          <div class="tap-hint">TAP TO REVEAL</div>
+        </div>
+        <div class="face back">
+          <div class="face-cat">DEFINITION</div>
+          <div class="def" id="fDef"></div>
+          <div class="plain" id="fPlain"></div>
+          <div class="tap-hint">TAP TO FLIP BACK</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="counter" id="fCounter">Card 1 of 28</div>
+    <div class="card-nav">
+      <button class="nav-btn dunno" id="btnReview">Need to review</button>
+      <button class="nav-btn know" id="btnKnow">I know this</button>
+    </div>
+    <button class="reset" id="fReset">Reset progress</button>
+  </div>
+
+  <!-- ===== QUIZ MODE ===== -->
+  <div id="quizMode" class="hidden">
+    <div class="stats">
+      <div class="stat g"><div class="n" id="qRight">0</div><div class="l">Correct</div></div>
+      <div class="stat r"><div class="n" id="qWrong">0</div><div class="l">Missed</div></div>
+      <div class="stat"><div class="n" id="qAcc">—</div><div class="l">Accuracy</div></div>
+    </div>
+
+    <div class="quiz-panel">
+      <div class="q-cat" id="qCat">CATEGORY</div>
+      <div class="q-prompt" id="qPrompt"></div>
+      <div class="q-sub">Pick the best plain-English definition.</div>
+      <div class="q-opts" id="qOpts"></div>
+      <div class="q-fb" id="qFb"></div>
+      <button class="q-next" id="qNext">Next term →</button>
+    </div>
+    <button class="reset" id="qReset">Reset quiz</button>
+  </div>
+
+  <!-- ===== GLOSSARY MODE ===== -->
+  <div id="glossMode" class="gloss">
+    <div id="glossList"></div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   IT VOCAB TRAINER
+   One shared term bank powers three modes: flashcards, a
+   multiple-choice quiz, and a plain glossary. Each term has a
+   formal definition plus a "plain" line — how I'd actually
+   explain it out loud to someone who's never heard it.
+   ============================================================ */
+
+const TERMS=[
+  {t:"Peripheral",c:"Hardware",x:"",
+   d:"Any device you connect to a computer that isn't the computer itself — keyboard, mouse, monitor, printer, scanner, webcam.",
+   p:"If you can unplug it and the computer still runs, it's probably a peripheral."},
+  {t:"VOIP",c:"Networking",x:"Voice over Internet Protocol",
+   d:"Phone calls carried over the internet instead of traditional phone lines. Most modern office phone systems work this way.",
+   p:"Your desk phone is really a tiny computer making calls over the network."},
+  {t:"VPN",c:"Security",x:"Virtual Private Network",
+   d:"An encrypted tunnel between your device and a network, letting you use company resources securely from outside the building.",
+   p:"It makes your laptop act like it's plugged in at the office, even from your couch."},
+  {t:"VLAN",c:"Networking",x:"Virtual Local Area Network",
+   d:"A way to split one physical network into separate logical networks, so traffic types stay isolated from each other.",
+   p:"Same cables and switches, but voice traffic and guest Wi-Fi are kept in separate lanes."},
+  {t:"DHCP",c:"Networking",x:"Dynamic Host Configuration Protocol",
+   d:"The service that automatically assigns IP addresses to devices when they join a network, so nobody configures them by hand.",
+   p:"It's why your phone just works when it joins Wi-Fi instead of asking you for an address."},
+  {t:"DNS",c:"Networking",x:"Domain Name System",
+   d:"Translates human-readable website names into the numeric IP addresses computers actually use to find each other.",
+   p:"The internet's phone book — you type a name, it finds the number."},
+  {t:"IP Address",c:"Networking",x:"",
+   d:"A unique numeric label identifying a device on a network, so data knows where to go.",
+   p:"Like a mailing address, but for a device on a network."},
+  {t:"Subnet",c:"Networking",x:"",
+   d:"A smaller network carved out of a larger one, used to organize devices and control how traffic flows between groups.",
+   p:"Dividing a big neighborhood into blocks so mail sorts faster."},
+  {t:"Firewall",c:"Security",x:"",
+   d:"A system that filters network traffic against a set of rules, blocking anything not explicitly allowed.",
+   p:"A bouncer for your network — it checks what's allowed in and out."},
+  {t:"Phishing",c:"Security",x:"",
+   d:"A social engineering attack where a fraudulent message impersonates a trusted source to steal credentials or money.",
+   p:"A fake email pretending to be your boss or your bank, hoping you'll click."},
+  {t:"Social Engineering",c:"Security",x:"",
+   d:"Manipulating people rather than systems — exploiting trust, urgency, or authority to get access that technical controls would deny.",
+   p:"Hacking the human instead of the computer."},
+  {t:"MFA",c:"Security",x:"Multi-Factor Authentication",
+   d:"Requiring two or more independent proofs of identity — something you know, something you have, something you are.",
+   p:"Password plus a code on your phone, so a stolen password alone isn't enough."},
+  {t:"Least Privilege",c:"Security",x:"",
+   d:"The principle that users should have only the minimum access needed to do their job, and nothing more.",
+   p:"Don't give everyone the master key just because it's easier."},
+  {t:"Encryption",c:"Security",x:"",
+   d:"Scrambling data so it's unreadable without the correct key, protecting it in transit or at rest.",
+   p:"Locking the contents so an intercepted message is just gibberish."},
+  {t:"Active Directory",c:"Systems",x:"AD",
+   d:"Microsoft's directory service for managing users, computers, groups, and permissions across a Windows network.",
+   p:"The company's master list of who exists and what they're allowed to touch."},
+  {t:"Azure AD",c:"Systems",x:"Microsoft Entra ID",
+   d:"The cloud-based identity service behind Microsoft 365, handling sign-ins, access, and licensing for cloud resources.",
+   p:"Active Directory's cloud counterpart — it's what checks your login for Teams and Outlook."},
+  {t:"Group Policy",c:"Systems",x:"GPO",
+   d:"A centralized way to enforce configuration and security settings across many Windows machines at once.",
+   p:"Set a rule once, and every company laptop follows it."},
+  {t:"Provisioning",c:"Systems",x:"",
+   d:"Creating and configuring a user account with the correct licenses, group memberships, and access rights.",
+   p:"Setting up a new hire so they can actually log in on day one."},
+  {t:"Offboarding",c:"Systems",x:"",
+   d:"Removing a departing employee's access — disabling accounts, revoking licenses, and preserving needed data.",
+   p:"Making sure someone who left can't still log in next week."},
+  {t:"Ticket",c:"Help Desk",x:"",
+   d:"A tracked record of a support request, carrying its description, priority, owner, status, and resolution history.",
+   p:"The paper trail for one problem, from reported to fixed."},
+  {t:"SLA",c:"Help Desk",x:"Service Level Agreement",
+   d:"A commitment defining how fast issues must be responded to and resolved, usually varying by priority level.",
+   p:"The promise about how quickly you'll get help, in writing."},
+  {t:"Escalation",c:"Help Desk",x:"",
+   d:"Passing an issue to a higher tier or specialist team when it exceeds the current technician's scope or access.",
+   p:"Knowing when to stop and hand it to someone with more tools than you."},
+  {t:"Tier 1 / Tier 2",c:"Help Desk",x:"",
+   d:"Support levels — Tier 1 handles first contact and common fixes, Tier 2 handles deeper technical or systemic problems.",
+   p:"Tier 1 is the front desk; Tier 2 is the specialist in the back."},
+  {t:"Knowledge Base",c:"Help Desk",x:"KB",
+   d:"A searchable library of documented fixes and procedures so solutions don't have to be rediscovered each time.",
+   p:"Write down the fix once so the next person doesn't start from zero."},
+  {t:"Audit Trail",c:"Compliance",x:"",
+   d:"An append-only record of who did what and when, which cannot be edited or deleted after the fact.",
+   p:"A history that can't be quietly rewritten — that's what makes it trustworthy."},
+  {t:"GRC",c:"Compliance",x:"Governance, Risk & Compliance",
+   d:"The practice of setting policies, identifying risks, and proving the organization follows required rules and standards.",
+   p:"Making the rules, spotting what could go wrong, and proving you followed them."},
+  {t:"Imaging",c:"Hardware",x:"",
+   d:"Applying a standardized system snapshot to a machine so every device starts with identical, approved configuration.",
+   p:"Stamping the same clean setup onto every new laptop."},
+  {t:"Remote Desktop",c:"Systems",x:"RDP",
+   d:"Connecting to and controlling another computer over a network as though you were sitting in front of it.",
+   p:"Borrowing someone's screen and keyboard from across the building."}
+];
+
+const CATS=[...new Set(TERMS.map(t=>t.c))];
+let activeCat="All";
+let pool=[];
+
+/* ---------- filters ---------- */
+const filterBox=document.getElementById('filters');
+["All",...CATS].forEach(c=>{
+  const b=document.createElement('button');
+  b.className='chip'+(c==="All"?' on':'');
+  b.textContent=c;
+  b.addEventListener('click',()=>{
+    activeCat=c;
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    rebuild();
+  });
+  filterBox.appendChild(b);
+});
+
+function filtered(){return activeCat==="All"?TERMS:TERMS.filter(t=>t.c===activeCat);}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ---------- mode switching ---------- */
+let mode='flash';
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    mode=b.dataset.mode;
+    document.getElementById('flashMode').classList.toggle('hidden',mode!=='flash');
+    document.getElementById('quizMode').classList.toggle('hidden',mode!=='quiz');
+    document.getElementById('glossMode').classList.toggle('show',mode==='gloss');
+    rebuild();
+  });
+});
+
+function rebuild(){
+  if(mode==='flash')startFlash();
+  else if(mode==='quiz')startQuiz();
+  else renderGloss();
+}
+
+/* ============ FLASHCARDS ============ */
+let fIdx=0,fKnown=0,fReview=0;
+const flipCard=document.getElementById('flipCard');
+
+function startFlash(){
+  pool=shuffle(filtered());
+  fIdx=0;fKnown=0;fReview=0;
+  flipCard.classList.remove('flipped');
+  renderFlash();
+}
+function renderFlash(){
+  if(!pool.length)return;
+  if(fIdx>=pool.length){
+    document.getElementById('fTerm').textContent="Deck complete";
+    document.getElementById('fExpand').textContent=`${fKnown} known · ${fReview} to review`;
+    document.getElementById('fCat').textContent="DONE";
+    document.getElementById('fDef').textContent="Nice work. Reset to run the deck again, or switch to Quiz mode to test yourself.";
+    document.getElementById('fPlain').textContent="";
+    document.getElementById('fCounter').textContent=`${pool.length} of ${pool.length}`;
+    updateFStats();return;
+  }
+  const t=pool[fIdx];
+  flipCard.classList.remove('flipped');
+  document.getElementById('fCat').textContent=t.c.toUpperCase();
+  document.getElementById('fTerm').textContent=t.t;
+  document.getElementById('fExpand').textContent=t.x||"";
+  document.getElementById('fDef').textContent=t.d;
+  document.getElementById('fPlain').textContent=t.p;
+  document.getElementById('fCounter').textContent=`Card ${fIdx+1} of ${pool.length}`;
+  updateFStats();
+}
+function updateFStats(){
+  document.getElementById('fKnown').textContent=fKnown;
+  document.getElementById('fReview').textContent=fReview;
+  document.getElementById('fLeft').textContent=Math.max(pool.length-fIdx,0);
+}
+flipCard.addEventListener('click',()=>{
+  if(fIdx<pool.length)flipCard.classList.toggle('flipped');
+});
+document.getElementById('btnKnow').addEventListener('click',()=>{
+  if(fIdx<pool.length){fKnown++;fIdx++;renderFlash();}
+});
+document.getElementById('btnReview').addEventListener('click',()=>{
+  if(fIdx<pool.length){fReview++;pool.push(pool[fIdx]);fIdx++;renderFlash();}
+});
+document.getElementById('fReset').addEventListener('click',startFlash);
+
+/* ============ QUIZ ============ */
+let qPool=[],qIdx=0,qRight=0,qWrong=0;
+function startQuiz(){
+  qPool=shuffle(filtered());qIdx=0;qRight=0;qWrong=0;
+  updateQStats();renderQuiz();
+}
+function updateQStats(){
+  document.getElementById('qRight').textContent=qRight;
+  document.getElementById('qWrong').textContent=qWrong;
+  const tot=qRight+qWrong;
+  document.getElementById('qAcc').textContent=tot?Math.round(qRight/tot*100)+'%':'—';
+}
+function renderQuiz(){
+  const fb=document.getElementById('qFb');
+  fb.className='q-fb';fb.innerHTML='';
+  document.getElementById('qNext').classList.remove('show');
+
+  if(qIdx>=qPool.length){
+    document.getElementById('qCat').textContent="COMPLETE";
+    document.getElementById('qPrompt').textContent="Quiz finished";
+    document.getElementById('qOpts').innerHTML=
+      `<div style="font-size:14px;color:var(--slate);padding:6px 0;">You got ${qRight} of ${qPool.length} right. Reset to run it again, or switch categories above to drill a specific area.</div>`;
+    return;
+  }
+  const t=qPool[qIdx];
+  document.getElementById('qCat').textContent=t.c.toUpperCase();
+  document.getElementById('qPrompt').textContent=t.x?`${t.t} — ${t.x}`:t.t;
+
+  const wrongs=shuffle(TERMS.filter(x=>x.t!==t.t)).slice(0,3);
+  const opts=shuffle([{txt:t.p,ok:true},...wrongs.map(w=>({txt:w.p,ok:false}))]);
+
+  const box=document.getElementById('qOpts');
+  box.innerHTML='';
+  opts.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='q-opt';b.textContent=o.txt;
+    b.addEventListener('click',()=>{
+      box.querySelectorAll('.q-opt').forEach(x=>{x.disabled=true;x.classList.add('dim');});
+      box.querySelectorAll('.q-opt').forEach(x=>{
+        if(x.textContent===t.p){x.classList.remove('dim');x.classList.add('right');}
+        else if(x===b){x.classList.remove('dim');x.classList.add('wrong');}
+      });
+      fb.classList.add('show');
+      if(o.ok){qRight++;fb.classList.add('good');fb.innerHTML=`<b>Correct.</b>${t.d}`;}
+      else{qWrong++;fb.classList.add('bad');fb.innerHTML=`<b>Not quite.</b>${t.t}: ${t.d}`;}
+      updateQStats();
+      const n=document.getElementById('qNext');
+      n.classList.add('show');
+      n.textContent=(qIdx>=qPool.length-1)?'See results →':'Next term →';
+      n.onclick=()=>{qIdx++;renderQuiz();};
+    });
+    box.appendChild(b);
+  });
+}
+document.getElementById('qReset').addEventListener('click',startQuiz);
+
+/* ============ GLOSSARY ============ */
+function renderGloss(){
+  const list=document.getElementById('glossList');
+  const items=filtered().slice().sort((a,b)=>a.t.localeCompare(b.t));
+  list.innerHTML=items.map(t=>`
+    <div class="g-item">
+      <div class="g-top">
+        <h3>${t.t}</h3>
+        ${t.x?`<span class="g-cat">${t.x}</span>`:''}
+        <span class="g-cat">${t.c}</span>
+      </div>
+      <div class="g-def">${t.d}</div>
+      <div class="g-plain">${t.p}</div>
+    </div>`).join('');
+}
+
+startFlash();
+</script>
+</body>
+</html>
