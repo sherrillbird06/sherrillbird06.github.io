@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jaylen Sherrill — IT Support Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0F1B2D;
+    --slate:#3B4A5E;
+    --slate-light:#64748B;
+    --paper:#F6F7F9;
+    --card:#FFFFFF;
+    --line:#E2E6EB;
+    --signal:#22A06B;
+    --signal-bg:#E6F5EE;
+    --amber:#B4740E;
+    --amber-bg:#FBF1E0;
+    --blue:#2563A8;
+    --blue-bg:#E8F0F9;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--navy);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.mono{font-family:'Space Grotesk',sans-serif;}
+  a{color:inherit;}
+  .wrap{max-width:840px; margin:0 auto; padding:0 24px;}
+
+  header{
+    border-bottom:1px solid var(--line);
+    background:var(--navy);
+    color:#fff;
+    padding:56px 0 44px;
+  }
+  .status-row{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    letter-spacing:0.04em;
+    color:#9FB4CC;
+    text-transform:uppercase;
+    margin-bottom:22px;
+  }
+  .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:#3DDC84;
+    box-shadow:0 0 0 0 rgba(61,220,132,0.6);
+    animation:pulse 2.2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(61,220,132,0.5);}
+    70%{box-shadow:0 0 0 8px rgba(61,220,132,0);}
+    100%{box-shadow:0 0 0 0 rgba(61,220,132,0);}
+  }
+  header h1{
+    font-size:clamp(32px,5vw,46px);
+    font-weight:700;
+    letter-spacing:-0.01em;
+    margin-bottom:14px;
+  }
+  header p.blurb{
+    max-width:560px;
+    color:#AFC0D3;
+    font-size:15.5px;
+  }
+  .contact-row{
+    display:flex; flex-wrap:wrap; gap:18px;
+    margin-top:26px;
+    font-size:14px;
+  }
+  .contact-row a{
+    color:#DCE6F0;
+    text-decoration:none;
+    border-bottom:1px solid rgba(220,230,240,0.35);
+    padding-bottom:2px;
+  }
+  .contact-row a:hover{border-color:#3DDC84; color:#fff;}
+  .btn{
+    display:inline-block;
+    background:#3DDC84;
+    color:#0F1B2D;
+    font-weight:600;
+    font-size:14px;
+    padding:10px 18px;
+    border-radius:6px;
+    text-decoration:none;
+    margin-top:24px;
+  }
+  .btn:hover{background:#5EE79C;}
+
+  .queue-intro{
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:10px;
+    padding:28px 0 6px;
+  }
+  .queue-intro h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--slate-light);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .counter{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--slate-light);
+    background:var(--card);
+    border:1px solid var(--line);
+    padding:6px 12px;
+    border-radius:20px;
+  }
+  .counter strong{color:var(--signal);}
+  .queue-hint{
+    font-size:13px; color:var(--slate-light); padding:6px 0 18px;
+  }
+
+  .queue{padding-bottom:20px;}
+  .ticket{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:12px;
+    overflow:hidden;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .ticket:hover{border-color:#B9C4D0; box-shadow:0 6px 18px rgba(15,27,45,0.06);}
+  .ticket.is-open{border-color:#9FB4CC; box-shadow:0 8px 22px rgba(15,27,45,0.08);}
+
+  .ticket-head{
+    display:flex; align-items:center; gap:16px;
+    padding:18px 22px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .ticket-id{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--slate-light);
+    white-space:nowrap;
+    width:78px;
+    flex-shrink:0;
+  }
+  .ticket-subject{
+    font-size:15.5px;
+    font-weight:600;
+    flex:1;
+  }
+  .ticket-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    font-weight:500;
+    letter-spacing:0.03em;
+    padding:3px 9px;
+    border-radius:20px;
+    background:var(--amber-bg);
+    color:var(--amber);
+    white-space:nowrap;
+    transition:all .2s ease;
+  }
+  .ticket.is-viewed .ticket-tag{
+    background:var(--signal-bg); color:var(--signal);
+  }
+  .chevron{
+    font-size:13px;
+    color:var(--slate-light);
+    transition:transform .2s ease;
+    flex-shrink:0;
+  }
+  .ticket.is-open .chevron{transform:rotate(90deg);}
+
+  .ticket-body{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  .ticket-body-inner{
+    padding:0 22px 24px 22px;
+    border-top:1px dashed var(--line);
+    padding-top:18px;
+  }
+  .ticket-body-inner p{
+    font-size:14.5px; color:var(--slate); margin-bottom:12px;
+  }
+  .ticket-body-inner p:last-child{margin-bottom:0;}
+
+  .skill-block{margin-bottom:16px;}
+  .skill-block:last-child{margin-bottom:0;}
+  .skill-block h4{
+    font-size:12px; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--slate-light); font-family:'JetBrains Mono',monospace; margin-bottom:6px;
+  }
+  .skill-block p{margin-bottom:0; font-size:14.5px; color:var(--slate);}
+
+  .job{margin-bottom:20px;}
+  .job:last-child{margin-bottom:0;}
+  .job-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    flex-wrap:wrap; gap:6px; margin-bottom:2px;
+  }
+  .job-head h4{font-size:15px; font-weight:600;}
+  .job-head span{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--slate-light);
+  }
+  .job p.company{font-size:13.5px; color:var(--slate-light); margin-bottom:6px; font-style:italic;}
+  .job ul{padding-left:18px; color:var(--slate); font-size:14.5px;}
+  .job li{margin-bottom:3px;}
+
+  .tag-row{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px;}
+  .tag{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px;
+    background:var(--paper); border:1px solid var(--line); color:var(--slate);
+    padding:3px 8px; border-radius:5px;
+  }
+  .ticket-links a{
+    font-size:13.5px; font-weight:600; color:var(--navy);
+    text-decoration:none; border-bottom:1.5px solid var(--amber); padding-bottom:1px;
+  }
+  .ticket-links a:hover{color:var(--amber);}
+
+  footer{
+    padding:36px 0 60px; text-align:center; color:var(--slate-light); font-size:13px;
+    border-top:1px solid var(--line); margin-top:10px;
+  }
+
+  @media(max-width:600px){
+    header{padding:44px 0 36px;}
+    .ticket-id{width:56px; font-size:10.5px;}
+    .ticket-subject{font-size:14.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="status-row"><span class="dot"></span> Open to work — IT Support / Help Desk</div>
+    <h1>Jaylen Sherrill</h1>
+    <p class="blurb">Nashville, TN. Every section below is filed as a ticket — click one open to read it, the way you'd work a queue.</p>
+    <div class="contact-row">
+      <a href="mailto:jaylenbaylen@icloud.com">jaylenbaylen@icloud.com</a>
+      <a href="tel:6159109432">615-910-9432</a>
+      <a href="https://www.linkedin.com/in/jaylen-sherrill-b91636327" target="_blank">LinkedIn</a>
+    </div>
+    <a class="btn" href="resume.pdf" target="_blank">Download Resume ↓</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="queue-intro">
+    <h2>Ticket Queue</h2>
+    <div class="counter"><strong id="viewedCount">0</strong> / <span id="totalCount">6</span> reviewed</div>
+  </div>
+  <p class="queue-hint">Click a ticket to open it.</p>
+
+  <div class="queue" id="queue">
+
+    <div class="ticket" data-ticket>
+      <div class="ticket-head">
+        <span class="ticket-id">#IT-0101</span>
+        <span class="ticket-subject">Who is Jaylen Sherrill?</span>
+        <span class="ticket-tag">NEW</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-body-inner">
+          <p>I'm an IT student at Nashville State Community College, but my path into IT started before I ever touched a textbook. I've spent the last two years in roles where I was the person people came to when something stopped working — a scanner that wouldn't read, a POS terminal throwing errors mid-transaction, a comms system dropping out during ground operations. Staying calm and fixing the problem while everyone around me was stressed is a pattern I noticed in myself, and it's what pushed me to make IT support an actual career instead of just a skill I happened to have.</p>
+          <p>What draws me to a role like this one specifically is the operational side — supporting people and systems that have to work correctly under real time pressure, not just a helpdesk in an office. My time as a ramp agent gave me a real feel for airport operations and the standards that come with working around aircraft, which I don't think many entry-level IT candidates can say.</p>
+          <p>Right now I'm building out the formal side: Microsoft 365/Azure AD fundamentals, scripting logic, and documentation practices. The two tools further down this page aren't class assignments — I built them from scratch to prove I can take a concept and actually ship something with it.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket" data-ticket>
+      <div class="ticket-head">
+        <span class="ticket-id">#IT-0102</span>
+        <span class="ticket-subject">Technical &amp; Professional Skills</span>
+        <span class="ticket-tag">NEW</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-body-inner">
+          <div class="skill-block">
+            <h4>Hardware &amp; Systems</h4>
+            <p>Hardware, peripheral, and POS/scanner troubleshooting; Windows OS support and basic system configuration; working knowledge of Microsoft 365 and Azure Active Directory concepts.</p>
+          </div>
+          <div class="skill-block">
+            <h4>Scripting &amp; Web Fundamentals</h4>
+            <p>Comfortable reading and writing basic JavaScript, HTML, and CSS — enough to build a working tool end-to-end, like the ticket tracker on this page, and explain every part of how it works.</p>
+          </div>
+          <div class="skill-block">
+            <h4>Documentation &amp; Process</h4>
+            <p>IT ticketing and incident documentation, knowledge base writing, audit-trail logging, process compliance, and attention to detail under deadline pressure.</p>
+          </div>
+          <div class="skill-block">
+            <h4>Networking</h4>
+            <p>Network and connectivity troubleshooting fundamentals, VOIP familiarity, and an understanding of how escalation between Tier 1 and Tier 2 support should work.</p>
+          </div>
+          <div class="skill-block">
+            <h4>People Skills</h4>
+            <p>Customer service and de-escalation, clear verbal and written communication, cross-team coordination, and staying composed when priorities shift without warning.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket" data-ticket>
+      <div class="ticket-head">
+        <span class="ticket-id">#IT-0103</span>
+        <span class="ticket-subject">Work Experience</span>
+        <span class="ticket-tag">NEW</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-body-inner">
+          <div class="job">
+            <div class="job-head"><h4>Warehouse Associate</h4><span>MAY 2025 — PRESENT</span></div>
+            <p class="company">Amazon, Nashville, TN</p>
+            <ul>
+              <li>Operate handheld scanning devices and internal inventory systems, troubleshooting device and scanning errors in real time to prevent operational delays.</li>
+              <li>Escalate technical discrepancies through proper reporting channels and coordinate with support teams to resolve issues quickly.</li>
+              <li>Maintain high performance and accuracy metrics in a fast-paced, deadline-driven environment.</li>
+            </ul>
+          </div>
+          <div class="job">
+            <div class="job-head"><h4>Ramp Agent</h4><span>NOV 2024 — MAR 2025</span></div>
+            <p class="company">United Ground Express, Nashville, TN</p>
+            <ul>
+              <li>Supported airline ground operations, coordinating with operations teams via internal communication systems — direct exposure to airport and aviation operational environments.</li>
+              <li>Reported equipment malfunctions and operational issues promptly to keep flights on schedule.</li>
+              <li>Followed strict procedural, safety, and accuracy standards required in a regulated aviation setting.</li>
+              <li>Performed effectively in high-pressure, time-sensitive situations requiring structured problem resolution.</li>
+            </ul>
+          </div>
+          <div class="job">
+            <div class="job-head"><h4>Front End Associate</h4><span>MAR 2024 — NOV 2024</span></div>
+            <p class="company">Walmart, Mount Juliet, TN</p>
+            <ul>
+              <li>Provided front-line technical support for customers on self-checkout and POS systems, troubleshooting payment processing and scanning errors.</li>
+              <li>Documented recurring system irregularities and maintained transaction accuracy in a high-volume retail environment.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket" data-ticket>
+      <div class="ticket-head">
+        <span class="ticket-id">#IT-0104</span>
+        <span class="ticket-subject">Education &amp; Certifications</span>
+        <span class="ticket-tag">NEW</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-body-inner">
+          <div class="skill-block">
+            <h4>A.A.S., Information Technology — In Progress</h4>
+            <p>Nashville State Community College, Nashville, TN. Enrolled 2024 – Present.</p>
+          </div>
+          <div class="skill-block">
+            <h4>CompTIA Network+ — Studying, exam expected 2026</h4>
+            <p>Currently preparing for the Network+ certification to build a stronger foundation in networking concepts alongside coursework.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket" data-ticket>
+      <div class="ticket-head">
+        <span class="ticket-id">#IT-0105</span>
+        <span class="ticket-subject">Project: IT Ticket &amp; Audit Log Tracker</span>
+        <span class="ticket-tag">NEW</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-body-inner">
+          <p>A working help-desk ticketing app I built from scratch. Log a ticket, move it through a real status workflow — Open → In Progress → Resolved → Closed — and every single change gets permanently written to an audit trail, exportable as a CSV, the way a GRC or compliance reviewer would actually want to see it.</p>
+          <p>Built with plain JavaScript, HTML, and CSS — no frameworks — specifically so I could understand and explain every part of how it works, not just assemble something from a template.</p>
+          <div class="tag-row">
+            <span class="tag">JavaScript</span>
+            <span class="tag">HTML/CSS</span>
+            <span class="tag">Audit Logging</span>
+            <span class="tag">GRC</span>
+          </div>
+          <div class="ticket-links"><a href="ticket-tracker.html" target="_blank">Try the live demo →</a></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket" data-ticket>
+      <div class="ticket-head">
+        <span class="ticket-id">#IT-0106</span>
+        <span class="ticket-subject">Project: VOIP &amp; Connectivity Knowledge Base Article</span>
+        <span class="ticket-tag">NEW</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-body-inner">
+          <p>A step-by-step knowledge base article written for front-line staff and IT support, covering how to diagnose common VOIP and network connectivity issues — from checking physical connections, to power-cycling, to VLAN configuration — with clear criteria for when to escalate to Tier 2.</p>
+          <p>Modeled on real help-desk documentation standards, formatted the way it would actually appear in an internal knowledge base.</p>
+          <div class="tag-row">
+            <span class="tag">Documentation</span>
+            <span class="tag">VOIP</span>
+            <span class="tag">Networking</span>
+            <span class="tag">Help Desk</span>
+          </div>
+          <div class="ticket-links"><a href="KB_VOIP_Troubleshooting.pdf" target="_blank">Read the article →</a></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  Jaylen Sherrill · Nashville, TN · Built to document real progress toward an IT career.
+</footer>
+
+<script>
+  const tickets = document.querySelectorAll('[data-ticket]');
+  const viewedCountEl = document.getElementById('viewedCount');
+  document.getElementById('totalCount').textContent = tickets.length;
+  let viewedCount = 0;
+
+  tickets.forEach(ticket => {
+    const head = ticket.querySelector('.ticket-head');
+    const body = ticket.querySelector('.ticket-body');
+    const tag = ticket.querySelector('.ticket-tag');
+
+    head.addEventListener('click', () => {
+      const isOpen = ticket.classList.contains('is-open');
+
+      if(isOpen){
+        ticket.classList.remove('is-open');
+        body.style.maxHeight = null;
+      } else {
+        ticket.classList.add('is-open');
+        body.style.maxHeight = body.scrollHeight + 'px';
+
+        if(!ticket.classList.contains('is-viewed')){
+          ticket.classList.add('is-viewed');
+          tag.textContent = 'VIEWED';
+          viewedCount++;
+          viewedCountEl.textContent = viewedCount;
+        }
+      }
+    });
+  });
+
+  if(tickets.length){
+    tickets[0].querySelector('.ticket-head').click();
+  }
+</script>
+
+</body>
+</html>
