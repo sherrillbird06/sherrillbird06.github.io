@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homelab Architect — Jaylen Sherrill</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05080D; --panel:#0C1119; --panel-2:#131B28; --line:#1B2432; --line-soft:#141B26;
+  --text:#E8EFF8; --muted:#8496AC; --muted-2:#5F7085;
+  --accent:#4D7CFF; --cyan:#22D3EE; --green:#34D399; --amber:#FBBF24; --red:#F87171; --violet:#A78BFA;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5;
+  -webkit-font-smoothing:antialiased;min-height:100vh;}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+a{color:inherit;}
+
+/* atmosphere */
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(77,124,255,.04) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(77,124,255,.04) 1px,transparent 1px);
+  background-size:52px 52px;
+  mask-image:radial-gradient(ellipse 120% 70% at 50% 0%,#000 20%,transparent 80%);
+  -webkit-mask-image:radial-gradient(ellipse 120% 70% at 50% 0%,#000 20%,transparent 80%);}
+.glow1,.glow2{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;}
+.glow1{width:560px;height:560px;background:rgba(77,124,255,.13);top:-200px;left:-120px;}
+.glow2{width:520px;height:520px;background:rgba(34,211,238,.09);bottom:-180px;right:-160px;}
+
+.wrap{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:24px 20px 70px;}
+
+.topnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.back{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-decoration:none;
+  letter-spacing:.05em;padding:7px 12px;border-radius:7px;border:1px solid var(--line);
+  background:rgba(12,17,25,.7);transition:all .16s;}
+.back:hover{color:var(--text);border-color:var(--accent);}
+
+.head{margin-bottom:20px;}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--accent);
+  text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:9px;}
+.kicker::after{content:"";flex:1;height:1px;max-width:130px;
+  background:linear-gradient(90deg,rgba(77,124,255,.5),transparent);}
+.head h1{font-size:27px;font-weight:700;margin-bottom:7px;}
+.head p{color:var(--muted);font-size:14.5px;max-width:680px;}
+
+/* presets */
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 20px;align-items:center;}
+.preset-lbl{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted-2);margin-right:3px;}
+.preset{font-size:12px;padding:7px 13px;border-radius:20px;border:1px solid var(--line);
+  background:var(--panel);color:var(--muted);transition:all .15s;}
+.preset:hover{border-color:var(--accent);color:var(--text);background:rgba(77,124,255,.08);}
+.preset.clear{margin-left:auto;color:var(--muted-2);border-style:dashed;}
+.preset.clear:hover{border-color:var(--red);color:var(--red);background:rgba(248,113,113,.06);}
+
+/* layout */
+.layout{display:grid;grid-template-columns:250px 1fr 290px;gap:14px;align-items:start;}
+@media(max-width:1100px){.layout{grid-template-columns:230px 1fr;}.col-right{grid-column:1/-1;}}
+@media(max-width:760px){.layout{grid-template-columns:1fr;}}
+
+.card{background:linear-gradient(165deg,var(--panel-2),var(--panel));border:1px solid var(--line);
+  border-radius:13px;overflow:hidden;}
+.card-h{padding:11px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  justify-content:space-between;gap:8px;
+  font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted-2);}
+.badge{background:rgba(77,124,255,.13);color:var(--accent);border:1px solid rgba(77,124,255,.26);
+  padding:1px 7px;border-radius:10px;font-size:9px;}
+
+/* palette */
+.pal-group{padding:10px 11px;}
+.pal-group + .pal-group{border-top:1px solid var(--line-soft);}
+.pal-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted-2);margin-bottom:8px;padding-left:3px;}
+.pal-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 10px;
+  border-radius:8px;border:1px solid var(--line);background:rgba(8,12,19,.55);margin-bottom:6px;
+  transition:all .14s;}
+.pal-item:hover:not(:disabled){border-color:var(--accent);background:rgba(77,124,255,.09);transform:translateX(2px);}
+.pal-item:disabled{opacity:.32;cursor:not-allowed;}
+.pal-ico{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:13px;}
+.pal-body{flex:1;min-width:0;}
+.pal-name{font-size:12.5px;font-weight:600;line-height:1.25;}
+.pal-meta{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted-2);margin-top:1px;}
+
+/* rack */
+.rack-wrap{padding:15px;}
+.rack{background:linear-gradient(170deg,#0A0F17,#070A10);border:1px solid #202B3C;border-radius:11px;
+  padding:12px;box-shadow:inset 0 0 40px rgba(0,0,0,.6);}
+.rack-rails{display:flex;gap:9px;}
+.rail{width:12px;flex-shrink:0;border-radius:4px;background:repeating-linear-gradient(180deg,
+  #131B27 0 5px,#0C121B 5px 10px);border:1px solid #1D2837;}
+.rack-slots{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}
+
+.slot{height:44px;border-radius:7px;border:1px dashed #1C2635;background:rgba(10,15,23,.5);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:#2C3A4E;letter-spacing:.1em;}
+
+.dev{border-radius:7px;border:1px solid var(--line);background:linear-gradient(160deg,#141C2A,#0D131C);
+  display:flex;align-items:center;gap:10px;padding:0 12px;cursor:pointer;transition:all .15s;
+  position:relative;overflow:hidden;}
+.dev::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--dc,var(--accent));}
+.dev:hover{border-color:#2B3852;transform:translateX(2px);}
+.dev.sel{border-color:var(--accent);box-shadow:0 0 0 1px rgba(77,124,255,.3),0 5px 20px rgba(77,124,255,.15);}
+.dev-ico{width:24px;height:24px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:12px;}
+.dev-main{flex:1;min-width:0;}
+.dev-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dev-svc{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted-2);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dev-leds{display:flex;gap:3px;flex-shrink:0;}
+.dled{width:4px;height:4px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);}
+.dled.b{background:var(--accent);box-shadow:0 0 5px var(--accent);animation:bl 2.2s infinite;}
+.dled.a{background:var(--amber);box-shadow:0 0 5px var(--amber);animation:bl 2.2s infinite .7s;}
+@keyframes bl{0%,100%{opacity:1;}50%{opacity:.25;}}
+.dev-rm{flex-shrink:0;width:20px;height:20px;border-radius:5px;border:1px solid var(--line);
+  color:var(--muted-2);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.dev-rm:hover{border-color:var(--red);color:var(--red);background:rgba(248,113,113,.08);}
+
+/* topology */
+.topo{padding:14px 15px;}
+.topo svg{width:100%;height:auto;display:block;}
+.flowline{stroke-dasharray:4 7;animation:flow 2.6s linear infinite;}
+@keyframes flow{to{stroke-dashoffset:-44;}}
+
+/* stats */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);}
+.stat{background:var(--panel);padding:13px 14px;}
+.stat .v{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;line-height:1.05;}
+.stat .k{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted-2);
+  letter-spacing:.09em;text-transform:uppercase;margin-top:3px;}
+
+/* services */
+.svc-list{padding:11px;max-height:270px;overflow-y:auto;}
+.svc-list::-webkit-scrollbar{width:6px;}
+.svc-list::-webkit-scrollbar-thumb{background:#1F2A3A;border-radius:4px;}
+.svc-hint{font-size:11.5px;color:var(--muted-2);text-align:center;padding:22px 12px;
+  font-family:'JetBrains Mono',monospace;line-height:1.7;}
+.svc{display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;padding:8px 10px;
+  border-radius:8px;border:1px solid var(--line);background:rgba(8,12,19,.55);margin-bottom:6px;
+  transition:all .14s;}
+.svc:hover:not(:disabled){border-color:var(--cyan);background:rgba(34,211,238,.07);}
+.svc:disabled{opacity:.35;cursor:not-allowed;}
+.svc.on{border-color:var(--green);background:rgba(52,211,153,.09);}
+.svc-chk{width:15px;height:15px;border-radius:4px;border:1px solid var(--line);flex-shrink:0;
+  margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--green);}
+.svc.on .svc-chk{border-color:var(--green);background:rgba(52,211,153,.14);}
+.svc-n{font-size:12.5px;font-weight:600;}
+.svc-d{font-size:10.5px;color:var(--muted-2);line-height:1.4;margin-top:1px;}
+
+/* advisor */
+.adv-list{padding:11px;}
+.adv{display:flex;gap:9px;padding:9px 11px;border-radius:8px;margin-bottom:6px;border:1px solid;
+  font-size:11.8px;line-height:1.5;animation:fu .3s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+.adv .ai{flex-shrink:0;font-size:11px;margin-top:1px;}
+.adv b{display:block;font-family:'Space Grotesk',sans-serif;font-size:12px;margin-bottom:2px;}
+.adv.crit{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.26);color:#F0A9A4;}
+.adv.crit b{color:var(--red);}
+.adv.warn{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.24);color:#E5C88A;}
+.adv.warn b{color:var(--amber);}
+.adv.good{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.24);color:#A2DCC5;}
+.adv.good b{color:var(--green);}
+.adv.info{background:rgba(77,124,255,.07);border-color:rgba(77,124,255,.22);color:#A9BEEC;}
+.adv.info b{color:var(--accent);}
+
+.score-band{padding:14px 15px;border-bottom:1px solid var(--line);text-align:center;}
+.score-v{font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;line-height:1;}
+.score-k{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted-2);margin-top:4px;}
+.score-bar{height:5px;border-radius:5px;background:#151D2A;overflow:hidden;margin-top:10px;
+  border:1px solid var(--line);}
+.score-fill{height:100%;border-radius:5px;transition:width .5s ease,background .5s;}
+
+.col-mid{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.col-left,.col-right{display:flex;flex-direction:column;gap:14px;}
+</style>
+</head>
+<body>
+
+<div class="grid-layer"></div><div class="glow1"></div><div class="glow2"></div>
+
+<div class="wrap">
+  <div class="topnav">
+    <a class="back" href="index.html">← BACK TO CONSOLE</a>
+  </div>
+
+  <div class="head">
+    <div class="kicker">Interactive Build Tool</div>
+    <h1>Homelab Architect</h1>
+    <p>Assemble a rack, install services on your hosts, and watch the topology, power draw, and running cost update live. The advisor on the right checks your build against real architecture rules and tells you what's wrong with it.</p>
+  </div>
+
+  <div class="presets">
+    <span class="preset-lbl">Load a build</span>
+    <button class="preset" data-preset="starter">Starter</button>
+    <button class="preset" data-preset="media">Media Server</button>
+    <button class="preset" data-preset="security">Security Lab</button>
+    <button class="preset" data-preset="full">Full Stack</button>
+    <button class="preset clear" id="btnClear">Clear rack</button>
+  </div>
+
+  <div class="layout">
+
+    <!-- LEFT: palette -->
+    <div class="col-left">
+      <div class="card">
+        <div class="card-h"><span>Hardware</span><span class="badge" id="uUsed">0 / 12U</span></div>
+        <div class="pal-group">
+          <div class="pal-title">Compute</div>
+          <div id="palCompute"></div>
+        </div>
+        <div class="pal-group">
+          <div class="pal-title">Network</div>
+          <div id="palNetwork"></div>
+        </div>
+        <div class="pal-group">
+          <div class="pal-title">Support</div>
+          <div id="palSupport"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MID: rack + topology -->
+    <div class="col-mid">
+      <div class="card">
+        <div class="card-h"><span>Rack Elevation</span><span class="badge" id="devCount">0 devices</span></div>
+        <div class="rack-wrap">
+          <div class="rack">
+            <div class="rack-rails">
+              <div class="rail"></div>
+              <div class="rack-slots" id="rackSlots"></div>
+              <div class="rail"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span>Network Topology</span></div>
+        <div class="topo" id="topo"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: stats, services, advisor -->
+    <div class="col-right">
+      <div class="card">
+        <div class="card-h"><span>Build Metrics</span></div>
+        <div class="stats">
+          <div class="stat"><div class="v" id="mWatt" style="color:var(--amber)">0W</div><div class="k">Draw</div></div>
+          <div class="stat"><div class="v" id="mMonth" style="color:var(--cyan)">$0</div><div class="k">Power / mo</div></div>
+          <div class="stat"><div class="v" id="mCost" style="color:var(--accent)">$0</div><div class="k">Hardware</div></div>
+          <div class="stat"><div class="v" id="mSvc" style="color:var(--green)">0</div><div class="k">Services</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span id="svcHead">Services</span></div>
+        <div class="svc-list" id="svcList">
+          <div class="svc-hint">SELECT A COMPUTE DEVICE<br>IN THE RACK TO INSTALL<br>SERVICES ON IT</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span>Architecture Advisor</span></div>
+        <div class="score-band">
+          <div class="score-v" id="scoreV" style="color:var(--muted-2)">—</div>
+          <div class="score-k">Build Rating</div>
+          <div class="score-bar"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+        </div>
+        <div class="adv-list" id="advList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   HOMELAB ARCHITECT
+   Two catalogs (hardware + services), one build array, and a
+   rules engine that re-evaluates the whole design on every
+   change. The advisor is the interesting part: each rule is a
+   small function that looks at the build and returns a finding.
+   ============================================================ */
+
+const KWH_RATE = 0.12;  // $/kWh — rough US average
+
+/* ---------- HARDWARE CATALOG ---------- */
+const HW = {
+  mini:   {n:"Mini PC Host",      cat:"compute", u:1, w:65,  c:250, ico:"▤", col:"var(--accent)",
+           d:"Small hypervisor host"},
+  tower:  {n:"Tower Server",      cat:"compute", u:2, w:180, c:420, ico:"▥", col:"var(--violet)",
+           d:"Heavy VM workloads"},
+  pi:     {n:"Raspberry Pi 5",    cat:"compute", u:1, w:12,  c:80,  ico:"◱", col:"var(--green)",
+           d:"Low-power single service"},
+  nas:    {n:"4-Bay NAS",         cat:"compute", u:2, w:45,  c:500, ico:"▦", col:"var(--cyan)",
+           d:"Bulk storage + backups"},
+  fw:     {n:"Firewall Appliance",cat:"network", u:1, w:25,  c:180, ico:"⬢", col:"var(--red)",
+           d:"Routing + perimeter"},
+  sw:     {n:"8-Port Switch",     cat:"network", u:1, w:15,  c:120, ico:"▬", col:"var(--amber)",
+           d:"Managed, VLAN capable"},
+  ap:     {n:"Wireless AP",       cat:"network", u:1, w:11,  c:110, ico:"◉", col:"var(--cyan)",
+           d:"Wi-Fi coverage"},
+  ups:    {n:"UPS Battery",       cat:"support", u:2, w:8,   c:160, ico:"▮", col:"var(--green)",
+           d:"Rides out power cuts"},
+  patch:  {n:"Patch Panel",       cat:"support", u:1, w:0,   c:40,  ico:"⋮⋮", col:"var(--muted)",
+           d:"Tidy cable termination"},
+};
+
+/* ---------- SERVICE CATALOG ---------- */
+const SVC = {
+  proxmox: {n:"Proxmox VE",       d:"Hypervisor — run multiple VMs on one box", host:["mini","tower"], tag:"hypervisor"},
+  docker:  {n:"Docker Host",      d:"Containerised apps, quick to deploy",       host:["mini","tower","pi","nas"], tag:"containers"},
+  pfsense: {n:"pfSense / OPNsense",d:"Firewall + router OS",                     host:["mini","fw"], tag:"firewall"},
+  pihole:  {n:"Pi-hole",          d:"Network-wide DNS filtering",                host:["pi","mini","tower","nas"], tag:"dns"},
+  ad:      {n:"Windows AD Lab",   d:"Domain controller, users, group policy",    host:["tower","mini"], tag:"directory"},
+  jelly:   {n:"Jellyfin",         d:"Self-hosted media streaming",               host:["tower","nas","mini"], tag:"media"},
+  cloud:   {n:"Nextcloud",        d:"Private file sync and share",               host:["nas","tower","mini"], tag:"files"},
+  vault:   {n:"Vaultwarden",      d:"Self-hosted password manager",              host:["pi","mini","tower","nas"], tag:"secrets"},
+  kuma:    {n:"Uptime Kuma",      d:"Monitors services, alerts on failure",      host:["pi","mini","tower","nas"], tag:"monitoring"},
+  wazuh:   {n:"Wazuh SIEM",       d:"Log collection and intrusion detection",    host:["tower","mini"], tag:"siem"},
+  pbs:     {n:"Backup Server",    d:"Scheduled, versioned backups",              host:["nas","tower","mini"], tag:"backup"},
+  vpn:     {n:"WireGuard VPN",    d:"Encrypted remote access to the lab",        host:["fw","mini","pi","tower"], tag:"vpn"},
+};
+
+const MAX_U = 12;
+let build = [];      // {uid, id, services:[]}
+let selected = null;
+
+const $ = id => document.getElementById(id);
+const uid = () => 'd' + Math.random().toString(36).slice(2,7);
+
+/* ---------- PALETTE ---------- */
+function renderPalette(){
+  const used = usedU();
+  const groups = {compute:$('palCompute'), network:$('palNetwork'), support:$('palSupport')};
+  Object.values(groups).forEach(g=>g.innerHTML='');
+  Object.entries(HW).forEach(([id,h])=>{
+    const fits = used + h.u <= MAX_U;
+    const b = document.createElement('button');
+    b.className='pal-item';
+    b.disabled = !fits;
+    b.innerHTML = `
+      <span class="pal-ico" style="background:${hexa(h.col)};color:${h.col}">${h.ico}</span>
+      <span class="pal-body">
+        <span class="pal-name">${h.n}</span>
+        <span class="pal-meta">${h.u}U · ${h.w}W · $${h.c}</span>
+      </span>`;
+    b.addEventListener('click',()=>addDevice(id));
+    groups[h.cat].appendChild(b);
+  });
+}
+function hexa(v){ // translucent version of a css var colour
+  const map={'var(--accent)':'rgba(77,124,255,.12)','var(--violet)':'rgba(167,139,250,.12)',
+             'var(--green)':'rgba(52,211,153,.12)','var(--cyan)':'rgba(34,211,238,.12)',
+             'var(--red)':'rgba(248,113,113,.12)','var(--amber)':'rgba(251,191,36,.12)',
+             'var(--muted)':'rgba(132,150,172,.12)'};
+  return map[v]||'rgba(77,124,255,.12)';
+}
+
+/* ---------- BUILD OPS ---------- */
+function usedU(){ return build.reduce((s,d)=>s+HW[d.id].u,0); }
+function addDevice(id){
+  if(usedU()+HW[id].u > MAX_U) return;
+  const d = {uid:uid(), id, services:[]};
+  build.push(d);
+  selected = HW[id].cat==='compute' || id==='fw' ? d.uid : selected;
+  renderAll();
+}
+function removeDevice(u){
+  build = build.filter(d=>d.uid!==u);
+  if(selected===u) selected=null;
+  renderAll();
+}
+function toggleService(sid){
+  const d = build.find(x=>x.uid===selected);
+  if(!d) return;
+  const s = SVC[sid];
+  if(!s.host.includes(d.id)) return;
+  d.services = d.services.includes(sid) ? d.services.filter(x=>x!==sid) : [...d.services,sid];
+  renderAll();
+}
+
+/* ---------- RACK ---------- */
+function renderRack(){
+  const slots = $('rackSlots');
+  slots.innerHTML='';
+  build.forEach(d=>{
+    const h = HW[d.id];
+    const el = document.createElement('div');
+    el.className='dev'+(selected===d.uid?' sel':'');
+    el.style.setProperty('--dc',h.col);
+    el.style.height = (h.u*44 + (h.u-1)*5) + 'px';
+    const svcNames = d.services.map(s=>SVC[s].n).join(' · ');
+    el.innerHTML = `
+      <span class="dev-ico" style="background:${hexa(h.col)};color:${h.col}">${h.ico}</span>
+      <span class="dev-main">
+        <span class="dev-name">${h.n}</span>
+        <span class="dev-svc">${svcNames || h.d}</span>
+      </span>
+      <span class="dev-leds"><i class="dled"></i><i class="dled b"></i><i class="dled a"></i></span>
+      <button class="dev-rm" title="Remove">×</button>`;
+    el.addEventListener('click',e=>{
+      if(e.target.classList.contains('dev-rm')){ removeDevice(d.uid); return; }
+      selected = d.uid; renderAll();
+    });
+    slots.appendChild(el);
+  });
+  const free = MAX_U - usedU();
+  for(let i=0;i<free;i++){
+    const s=document.createElement('div');
+    s.className='slot';
+    s.textContent = (usedU()+i+1)+'U';
+    slots.appendChild(s);
+  }
+  $('uUsed').textContent = usedU()+' / '+MAX_U+'U';
+  $('devCount').textContent = build.length + (build.length===1?' device':' devices');
+}
+
+/* ---------- SERVICES PANEL ---------- */
+function renderServices(){
+  const box=$('svcList');
+  const d = build.find(x=>x.uid===selected);
+  if(!d){
+    $('svcHead').textContent='Services';
+    box.innerHTML='<div class="svc-hint">SELECT A DEVICE IN THE<br>RACK TO INSTALL<br>SERVICES ON IT</div>';
+    return;
+  }
+  const compatible = Object.entries(SVC).filter(([,s])=>s.host.includes(d.id));
+  $('svcHead').textContent = 'Services · ' + HW[d.id].n;
+  if(!compatible.length){
+    box.innerHTML='<div class="svc-hint">THIS DEVICE DOESN\'T<br>HOST SERVICES</div>';
+    return;
+  }
+  box.innerHTML='';
+  compatible.forEach(([sid,s])=>{
+    const on = d.services.includes(sid);
+    const b=document.createElement('button');
+    b.className='svc'+(on?' on':'');
+    b.innerHTML=`<span class="svc-chk">${on?'✓':''}</span>
+      <span><span class="svc-n">${s.n}</span><span class="svc-d">${s.d}</span></span>`;
+    b.addEventListener('click',()=>toggleService(sid));
+    box.appendChild(b);
+  });
+}
+
+/* ---------- METRICS ---------- */
+function renderMetrics(){
+  const w = build.reduce((s,d)=>s+HW[d.id].w,0);
+  const c = build.reduce((s,d)=>s+HW[d.id].c,0);
+  const svc = build.reduce((s,d)=>s+d.services.length,0);
+  const perMonth = (w*24*30/1000)*KWH_RATE;
+  $('mWatt').textContent = w+'W';
+  $('mMonth').textContent = '$'+perMonth.toFixed(2);
+  $('mCost').textContent = '$'+c.toLocaleString();
+  $('mSvc').textContent = svc;
+}
+
+/* ---------- TOPOLOGY ---------- */
+function renderTopo(){
+  const box=$('topo');
+  if(!build.length){
+    box.innerHTML='<div class="svc-hint" style="padding:34px 12px">ADD HARDWARE TO SEE<br>THE NETWORK TOPOLOGY</div>';
+    return;
+  }
+  const hasFw = build.some(d=>d.id==='fw') || build.some(d=>d.services.includes('pfsense'));
+  const hasSw = build.some(d=>d.id==='sw');
+  const endpoints = build.filter(d=>['mini','tower','pi','nas','ap'].includes(d.id));
+
+  const W=560, rowY=[34,104,174,252];
+  let svg=`<svg viewBox="0 0 ${W} 300" xmlns="http://www.w3.org/2000/svg">`;
+  const node=(x,y,label,col,w=104)=>`
+    <g>
+      <rect x="${x-w/2}" y="${y-15}" width="${w}" height="30" rx="7"
+            fill="#0C121C" stroke="${col}" stroke-width="1.2" opacity=".95"/>
+      <text x="${x}" y="${y+4}" text-anchor="middle" font-family="JetBrains Mono, monospace"
+            font-size="9.5" fill="${col}">${label}</text>
+    </g>`;
+  const link=(x1,y1,x2,y2,col)=>`<path d="M${x1} ${y1} C ${x1} ${(y1+y2)/2}, ${x2} ${(y1+y2)/2}, ${x2} ${y2}"
+      fill="none" stroke="${col}" stroke-width="1.3" opacity=".55" class="flowline"/>`;
+
+  const cx=W/2;
+  // internet
+  svg+=node(cx,rowY[0],'INTERNET','#5F7085',110);
+  // firewall tier
+  const fwCol = hasFw ? '#F87171' : '#5F7085';
+  svg+=link(cx,rowY[0]+15,cx,rowY[1]-15,fwCol);
+  svg+=node(cx,rowY[1], hasFw?'FIREWALL':'⚠ NO FIREWALL', fwCol,120);
+  // switch tier
+  const swCol = hasSw ? '#FBBF24' : '#5F7085';
+  svg+=link(cx,rowY[1]+15,cx,rowY[2]-15,swCol);
+  svg+=node(cx,rowY[2], hasSw?'SWITCH':'DIRECT / NO SWITCH', swCol,140);
+  // endpoints
+  if(endpoints.length){
+    const gap = Math.min(120, (W-70)/endpoints.length);
+    const startX = cx - (gap*(endpoints.length-1))/2;
+    endpoints.forEach((d,i)=>{
+      const x = startX + gap*i;
+      const h = HW[d.id];
+      svg+=link(cx,rowY[2]+15,x,rowY[3]-15,h.col.replace('var(--accent)','#4D7CFF')
+        .replace('var(--violet)','#A78BFA').replace('var(--green)','#34D399')
+        .replace('var(--cyan)','#22D3EE').replace('var(--red)','#F87171')
+        .replace('var(--amber)','#FBBF24').replace('var(--muted)','#8496AC'));
+      const col = h.col.replace('var(--accent)','#4D7CFF').replace('var(--violet)','#A78BFA')
+        .replace('var(--green)','#34D399').replace('var(--cyan)','#22D3EE')
+        .replace('var(--red)','#F87171').replace('var(--amber)','#FBBF24')
+        .replace('var(--muted)','#8496AC');
+      svg+=node(x,rowY[3], h.n.toUpperCase().slice(0,13), col, Math.min(gap-8,108));
+    });
+  }
+  svg+='</svg>';
+  box.innerHTML=svg;
+}
+
+/* ---------- ADVISOR ---------- */
+function advise(){
+  const out=[];
+  const ids = build.map(d=>d.id);
+  const allSvc = build.flatMap(d=>d.services);
+  const has = id=>ids.includes(id);
+  const hasSvc = s=>allSvc.includes(s);
+  const compute = build.filter(d=>['mini','tower','pi','nas'].includes(d.id));
+
+  if(!build.length){
+    out.push({k:'info',t:'Empty rack',m:'Add hardware from the left panel, or load one of the preset builds above to see a worked example.'});
+    return out;
+  }
+
+  // perimeter
+  if(!has('fw') && !hasSvc('pfsense'))
+    out.push({k:'crit',t:'No firewall',m:'Nothing sits between your lab and the internet. A firewall appliance or pfSense on a host should be the first thing in the path.'});
+  else
+    out.push({k:'good',t:'Perimeter defined',m:'Traffic passes through a firewall before reaching your internal devices.'});
+
+  // switching
+  if(compute.length + (has('ap')?1:0) > 2 && !has('sw'))
+    out.push({k:'warn',t:'No switch',m:`You have ${compute.length + (has('ap')?1:0)} devices needing a port. Without a managed switch you can't segment traffic or run VLANs.`});
+
+  // power protection
+  if(!has('ups') && compute.length)
+    out.push({k:'warn',t:'No UPS',m:'An unclean shutdown during a power cut can corrupt VM disks and filesystems. A UPS is the cheapest insurance in the rack.'});
+
+  // hypervisor
+  if(hasSvc('proxmox'))
+    out.push({k:'good',t:'Hypervisor in place',m:'Running Proxmox lets one physical box host several isolated VMs — far better use of hardware than one service per machine.'});
+  else if(has('tower')||has('mini'))
+    out.push({k:'info',t:'No hypervisor yet',m:'Your server can host Proxmox, letting you run multiple isolated VMs instead of one OS per box.'});
+
+  // backup
+  if(hasSvc('pbs'))
+    out.push({k:'good',t:'Backups configured',m:'Versioned backups mean a bad change or failed disk is recoverable rather than fatal.'});
+  else if(compute.length)
+    out.push({k:'crit',t:'No backups',m:'Nothing here is recoverable. A lab without backups teaches you the wrong lesson the first time a disk dies.'});
+
+  // dns
+  if(hasSvc('pihole'))
+    out.push({k:'good',t:'DNS filtering active',m:'Pi-hole gives you network-wide ad and tracker blocking, plus visibility into what your devices are querying.'});
+
+  // monitoring
+  if(hasSvc('kuma'))
+    out.push({k:'good',t:'Monitoring online',m:"You'll know a service is down before someone else tells you — that's the operational habit worth building."});
+  else if(allSvc.length>=3)
+    out.push({k:'warn',t:'No monitoring',m:`You're running ${allSvc.length} services with nothing watching them. Uptime Kuma is lightweight and runs happily on a Pi.`});
+
+  // single point of failure
+  if(hasSvc('pihole') && !has('ups'))
+    out.push({k:'warn',t:'DNS is a single point of failure',m:'If the Pi-hole host drops, name resolution stops for the whole network. Keep a secondary DNS configured or put it on protected power.'});
+
+  // storage
+  if(has('nas'))
+    out.push({k:'good',t:'Dedicated storage',m:'Separating bulk storage from compute means you can rebuild a host without touching your data.'});
+
+  // security lab
+  if(hasSvc('wazuh'))
+    out.push({k:'good',t:'SIEM collecting logs',m:'Centralised log collection and alerting is the single most transferable skill in this build.'});
+
+  // vpn
+  if(hasSvc('vpn'))
+    out.push({k:'good',t:'Secure remote access',m:'WireGuard means you reach the lab from outside without exposing management interfaces to the internet.'});
+
+  // orphan hardware
+  const idle = compute.filter(d=>d.services.length===0);
+  if(idle.length)
+    out.push({k:'info',t:`${idle.length} host${idle.length>1?'s':''} idle`,m:'Select a device in the rack and install services on it — hardware with nothing running is just a heater.'});
+
+  // power sanity
+  const w = build.reduce((s,d)=>s+HW[d.id].w,0);
+  if(w>350)
+    out.push({k:'warn',t:'High power draw',m:`At ${w}W continuous you're looking at roughly $${((w*24*30/1000)*KWH_RATE).toFixed(0)}/month in electricity alone. Consider consolidating onto fewer, more efficient hosts.`});
+
+  return out;
+}
+
+function renderAdvisor(){
+  const findings = advise();
+  const box=$('advList');
+  box.innerHTML = findings.map(f=>{
+    const ic = f.k==='crit'?'✕':f.k==='warn'?'!':f.k==='good'?'✓':'i';
+    return `<div class="adv ${f.k}"><span class="ai">${ic}</span><span><b>${f.t}</b>${f.m}</span></div>`;
+  }).join('');
+
+  // score
+  if(!build.length){
+    $('scoreV').textContent='—'; $('scoreV').style.color='var(--muted-2)';
+    $('scoreFill').style.width='0%'; return;
+  }
+  const good = findings.filter(f=>f.k==='good').length;
+  const warn = findings.filter(f=>f.k==='warn').length;
+  const crit = findings.filter(f=>f.k==='crit').length;
+  let pct = Math.max(0, Math.min(100, good*16 - warn*7 - crit*20 + 30));
+  let grade, col;
+  if(pct>=88){grade='A';col='var(--green)';}
+  else if(pct>=70){grade='B';col='var(--cyan)';}
+  else if(pct>=50){grade='C';col='var(--amber)';}
+  else if(pct>=28){grade='D';col='var(--amber)';}
+  else {grade='F';col='var(--red)';}
+  $('scoreV').textContent=grade; $('scoreV').style.color=col;
+  $('scoreFill').style.width=pct+'%'; $('scoreFill').style.background=col;
+}
+
+/* ---------- PRESETS ---------- */
+const PRESETS={
+  starter:[['fw',['pfsense']],['sw',[]],['mini',['proxmox','docker']],['pi',['pihole']]],
+  media:[['fw',['pfsense']],['sw',[]],['tower',['proxmox','jelly','docker']],['nas',['pbs','cloud']],['ups',[]]],
+  security:[['fw',['pfsense','vpn']],['sw',[]],['tower',['proxmox','wazuh','ad']],['pi',['pihole','kuma']],['ups',[]]],
+  full:[['fw',['pfsense','vpn']],['sw',[]],['tower',['proxmox','ad','wazuh']],['nas',['pbs','cloud']],['pi',['pihole','kuma']]],
+};
+function loadPreset(key){
+  build=[];
+  (PRESETS[key]||[]).forEach(([id,svcs])=>{
+    if(usedU()+HW[id].u<=MAX_U) build.push({uid:uid(),id,services:svcs.slice()});
+  });
+  selected = build.find(d=>['mini','tower','pi','nas'].includes(d.id))?.uid || null;
+  renderAll();
+}
+
+/* ---------- RENDER ALL ---------- */
+function renderAll(){
+  renderPalette(); renderRack(); renderServices();
+  renderMetrics(); renderTopo(); renderAdvisor();
+}
+
+document.querySelectorAll('.preset[data-preset]').forEach(b=>{
+  b.addEventListener('click',()=>loadPreset(b.dataset.preset));
+});
+$('btnClear').addEventListener('click',()=>{build=[];selected=null;renderAll();});
+
+loadPreset('starter');
+</script>
+</body>
+</html>
