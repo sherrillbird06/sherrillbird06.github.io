@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Help Desk Simulator — Jaylen Sherrill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* cool room */
+  --wall:#243B5C; --wall-2:#1C2E49; --wall-lo:#16253B;
+  --floor:#1A2B40; --trim:#33517A;
+  --ink:#0D1826;
+  /* warm accents */
+  --wood:#C9834F; --wood-2:#A96A3C; --wood-lo:#8A5430;
+  --lamp:#FFC46B; --lampglow:rgba(255,196,107,.4);
+  /* ui */
+  --void:#070C14; --panel:#0E1725; --panel-2:#14203221;
+  --glass:rgba(18,29,46,.86); --line:#243449; --line-2:#31465F;
+  --text:#EAF1FA; --muted:#93A6BE; --muted-2:#657A94;
+  --accent:#5B8CFF; --cyan:#3ADCEF; --green:#4ADE9B; --amber:#FFC24D;
+  --red:#FF7A72; --violet:#B79BFF;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--void);color:var(--text);font-family:'Inter',sans-serif;
+  line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden;}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+a{color:inherit;text-decoration:none;}
+.stage{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .75s ease;}
+.stage.on{opacity:1;pointer-events:auto;}
+
+/* ════════ BOOT ════════ */
+#boot{background:var(--void);display:flex;align-items:center;justify-content:center;padding:24px;z-index:100;}
+.boot-inner{width:100%;max-width:600px;}
+.bl{font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2;color:var(--muted-2);white-space:pre-wrap;}
+.bl .ok{color:var(--green);} .bl .wr{color:var(--amber);} .bl .hi{color:var(--cyan);} .bl .ac{color:var(--accent);}
+.cur{display:inline-block;width:8px;height:14px;background:var(--green);vertical-align:-2px;animation:cbl 1s step-end infinite;}
+@keyframes cbl{0%,100%{opacity:1;}50%{opacity:0;}}
+.bp{margin-top:26px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted-2);letter-spacing:.14em;}
+.bp b{color:var(--text);}
+.skip{position:fixed;bottom:20px;right:22px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:#334965;} .skip:hover{color:var(--muted);}
+
+/* ════════ OFFICE ════════ */
+#office{z-index:50;overflow:hidden;background:#101B2B;}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.pl{transition:transform .55s cubic-bezier(.2,.8,.3,1);will-change:transform;}
+.hot{cursor:pointer;}
+.hot .hl{opacity:0;transition:opacity .25s;}
+.hot:hover .hl{opacity:1;}
+
+.title-o{
+  position:absolute;left:50%;top:5.5%;transform:translateX(-50%);text-align:center;z-index:9;
+  pointer-events:none;width:92%;
+}
+.to-1{font-family:'Space Grotesk',sans-serif;font-weight:700;
+  font-size:clamp(24px,4.4vw,44px);letter-spacing:-.02em;line-height:1.05;
+  color:#FFF;text-shadow:0 2px 0 rgba(13,24,38,.6),0 0 44px rgba(91,140,255,.5);}
+.to-1 em{font-style:normal;color:var(--amber);}
+.to-2{font-family:'JetBrains Mono',monospace;font-size:clamp(9px,1.3vw,11.5px);
+  letter-spacing:.3em;color:#9FB8D8;margin-top:9px;text-transform:uppercase;}
+
+.enter-tip{
+  position:absolute;left:50%;bottom:5%;transform:translateX(-50%);z-index:9;
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;
+  color:#BBD2F0;display:flex;align-items:center;gap:9px;white-space:nowrap;
+  background:rgba(13,24,38,.62);padding:9px 17px;border-radius:22px;
+  border:1px solid rgba(91,140,255,.32);backdrop-filter:blur(6px);
+  animation:bob 2.8s ease-in-out infinite;pointer-events:none;
+}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-5px);}}
+.enter-tip .rg{width:8px;height:8px;border-radius:50%;background:var(--amber);
+  box-shadow:0 0 0 0 rgba(255,194,77,.65);animation:rgp 2s infinite;}
+@keyframes rgp{70%{box-shadow:0 0 0 11px rgba(255,194,77,0);}100%{box-shadow:0 0 0 0 rgba(255,194,77,0);}}
+
+/* ════════ OS ════════ */
+#os{z-index:60;display:flex;flex-direction:column;
+  background:
+    radial-gradient(ellipse 66% 52% at 20% 16%,rgba(91,140,255,.16),transparent 62%),
+    radial-gradient(ellipse 52% 46% at 84% 78%,rgba(183,155,255,.11),transparent 66%),
+    linear-gradient(160deg,#0A1220 0%,#0C1524 48%,#070C14 100%);}
+#os::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(91,140,255,.035) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(91,140,255,.035) 1px,transparent 1px);
+  background-size:58px 58px;
+  mask-image:radial-gradient(ellipse 100% 80% at 50% 28%,#000 15%,transparent 76%);
+  -webkit-mask-image:radial-gradient(ellipse 100% 80% at 50% 28%,#000 15%,transparent 76%);}
+.desktop{flex:1;position:relative;overflow:hidden;}
+
+.icons{position:absolute;top:20px;left:20px;display:flex;flex-direction:column;gap:5px;z-index:1;}
+.dico{width:92px;padding:10px 6px;border-radius:10px;text-align:center;border:1px solid transparent;transition:background .14s;}
+.dico:hover{background:rgba(91,140,255,.11);border-color:rgba(91,140,255,.24);}
+.dico .gl{width:44px;height:44px;margin:0 auto 6px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;font-size:20px;border:1px solid;}
+.dico .lb{font-size:10.5px;color:#CBDCF0;line-height:1.3;font-weight:500;}
+
+.win{position:absolute;background:var(--glass);backdrop-filter:blur(20px);
+  border:1px solid var(--line-2);border-radius:13px;overflow:hidden;
+  box-shadow:0 32px 92px rgba(0,0,0,.66);display:flex;flex-direction:column;min-width:280px;
+  animation:wo .26s cubic-bezier(.2,.9,.3,1);}
+@keyframes wo{from{opacity:0;transform:scale(.96) translateY(10px);}to{opacity:1;transform:none;}}
+.win.closing{animation:wc .18s ease forwards;}
+@keyframes wc{to{opacity:0;transform:scale(.96) translateY(8px);}}
+.win-bar{height:37px;display:flex;align-items:center;gap:9px;padding:0 12px;flex-shrink:0;
+  background:linear-gradient(180deg,rgba(28,42,64,.92),rgba(16,25,39,.92));
+  border-bottom:1px solid var(--line);cursor:grab;user-select:none;}
+.win-bar:active{cursor:grabbing;}
+.wb-d{width:11px;height:11px;border-radius:50%;transition:filter .14s;}
+.wb-d:hover{filter:brightness(1.35);}
+.wb-d.r{background:#FF6B5F;} .wb-d.y{background:#FFC53D;} .wb-d.g{background:#42D06B;}
+.win-ttl{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;
+  color:var(--muted);flex:1;text-align:center;pointer-events:none;}
+.win-body{flex:1;overflow-y:auto;padding:20px 22px;}
+.win-body::-webkit-scrollbar{width:7px;}
+.win-body::-webkit-scrollbar-thumb{background:#28394F;border-radius:5px;}
+.win.min{display:none;}
+
+.wh{font-size:20px;font-weight:700;margin-bottom:5px;}
+.wsub{font-size:13px;color:var(--muted);margin-bottom:17px;}
+.sect{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted-2);margin:20px 0 10px;display:flex;align-items:center;gap:10px;}
+.sect::after{content:"";flex:1;height:1px;background:var(--line);}
+
+/* welcome doc */
+.hero-w{background:linear-gradient(150deg,rgba(91,140,255,.16),rgba(58,220,239,.05));
+  border:1px solid rgba(91,140,255,.28);border-radius:13px;padding:20px 21px;margin-bottom:18px;}
+.hero-w h2{font-size:21px;margin-bottom:8px;line-height:1.25;}
+.hero-w p{font-size:14px;color:#C3D3E8;line-height:1.65;}
+.doc p{font-size:14px;color:var(--muted);line-height:1.72;margin-bottom:13px;overflow-wrap:anywhere;}
+.doc p b{color:var(--text);font-weight:600;}
+.doc ul{margin:0 0 14px;padding-left:0;list-style:none;}
+.doc li{font-size:13.6px;color:var(--muted);line-height:1.6;padding:7px 0 7px 0;
+  display:flex;gap:11px;align-items:flex-start;border-bottom:1px solid rgba(36,52,73,.6);}
+.doc li:last-child{border-bottom:none;}
+.doc li .n{flex-shrink:0;width:23px;height:23px;border-radius:7px;display:flex;
+  align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;font-weight:600;background:rgba(91,140,255,.14);
+  color:var(--accent);border:1px solid rgba(91,140,255,.3);margin-top:1px;}
+.doc li .tx{flex:1;min-width:0;}
+.doc li .tx b{display:block;color:var(--text);font-size:13.6px;margin-bottom:2px;}
+.callout{background:rgba(255,194,77,.09);border:1px solid rgba(255,194,77,.28);
+  border-radius:11px;padding:14px 16px;margin-bottom:15px;}
+.callout b{display:block;font-family:'Space Grotesk',sans-serif;color:var(--amber);
+  font-size:13.5px;margin-bottom:4px;}
+.callout p{font-size:13.2px;color:#D6C9A8;line-height:1.62;margin:0;}
+.sig{margin-top:18px;padding-top:15px;border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--muted);}
+.sig b{color:var(--text);font-family:'Space Grotesk',sans-serif;}
+
+.prj{background:linear-gradient(160deg,rgba(23,35,54,.75),rgba(14,23,37,.75));
+  border:1px solid var(--line);border-radius:12px;margin-bottom:9px;overflow:hidden;
+  transition:border-color .16s,transform .16s;}
+.prj:hover{border-color:#37506E;transform:translateY(-1px);}
+.prj-h{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;user-select:none;}
+.prj-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:15px;flex-shrink:0;border:1px solid;}
+.prj-t{flex:1;min-width:0;}
+.prj-t .n{font-size:13.5px;font-weight:600;line-height:1.3;}
+.prj-t .k{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted-2);letter-spacing:.07em;margin-top:2px;}
+.prj-cv{font-size:10px;color:var(--muted-2);transition:transform .2s;}
+.prj.op .prj-cv{transform:rotate(90deg);}
+.prj-b{max-height:0;overflow:hidden;transition:max-height .32s ease;}
+.prj-bi{padding:0 15px 15px;}
+.prj-bi p{font-size:13px;color:var(--muted);margin-bottom:11px;line-height:1.6;overflow-wrap:anywhere;}
+.prj-bi p b{color:var(--text);font-weight:600;}
+.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:12px;}
+.mg div{background:rgba(11,18,29,.85);padding:10px 12px;min-width:0;}
+.mg span{display:block;font-family:'JetBrains Mono',monospace;font-size:8.5px;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);margin-bottom:2px;}
+.mg b{font-size:12.5px;overflow-wrap:anywhere;}
+.tgs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:13px;}
+.tg{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:5px;
+  background:rgba(91,140,255,.08);border:1px solid rgba(91,140,255,.19);color:#A6BEEC;}
+.launch{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:9px;
+  background:linear-gradient(140deg,var(--accent),#4270E8);color:#fff;font-size:12.5px;font-weight:600;
+  box-shadow:0 5px 20px rgba(91,140,255,.34);transition:all .16s;}
+.launch:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(91,140,255,.5);}
+
+.rec{background:rgba(13,21,34,.7);border:1px solid var(--line);border-radius:12px;
+  padding:15px 17px;margin-bottom:9px;display:flex;gap:14px;align-items:flex-start;}
+.rec-i{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:16px;border:1px solid;}
+.rec-c{flex:1;min-width:0;}
+.rec h4{font-size:14px;font-weight:600;margin-bottom:2px;}
+.rec .sb{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted-2);
+  letter-spacing:.07em;margin-bottom:6px;}
+.rec p{font-size:12.8px;color:var(--muted);line-height:1.55;}
+.rst{margin-left:auto;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:9px;
+  padding:3px 9px;border-radius:20px;border:1px solid;letter-spacing:.05em;}
+
+.cc{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
+.card{background:rgba(13,21,34,.7);border:1px solid var(--line);border-radius:12px;
+  padding:16px 17px;display:block;transition:all .16s;position:relative;overflow:hidden;}
+.card::after{content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .2s;}
+.card:hover{border-color:rgba(91,140,255,.42);transform:translateY(-2px);box-shadow:0 10px 30px rgba(91,140,255,.14);}
+.card:hover::after{opacity:.85;}
+.card .k{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted-2);margin-bottom:6px;}
+.card .v{font-size:14px;font-weight:600;overflow-wrap:anywhere;}
+
+.term-out{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;
+  color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;}
+.term-out .p{color:var(--green);} .term-out .c{color:var(--cyan);}
+.term-out .a{color:var(--accent);} .term-out .w{color:var(--amber);} .term-out .t{color:var(--text);}
+.term-in{display:flex;gap:8px;align-items:center;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.term-in span{color:var(--green);flex-shrink:0;}
+.term-in input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:12px;}
+
+.taskbar{height:47px;flex-shrink:0;background:rgba(11,18,30,.92);backdrop-filter:blur(20px);
+  border-top:1px solid var(--line-2);display:flex;align-items:center;gap:8px;padding:0 12px;z-index:50;}
+.startb{display:flex;align-items:center;gap:9px;padding:7px 14px;border-radius:9px;
+  background:linear-gradient(140deg,rgba(91,140,255,.2),rgba(91,140,255,.08));
+  border:1px solid rgba(91,140,255,.32);font-size:12.5px;font-weight:600;transition:all .15s;}
+.startb:hover{background:rgba(91,140,255,.28);}
+.startb .sq{width:15px;height:15px;border-radius:4px;
+  background:linear-gradient(140deg,var(--accent),#8FB0FF);box-shadow:0 0 10px rgba(91,140,255,.55);}
+.tb-items{display:flex;gap:6px;flex:1;overflow-x:auto;}
+.tb-items::-webkit-scrollbar{height:0;}
+.tbi{padding:6px 13px;border-radius:8px;font-size:11.5px;color:var(--muted);
+  border:1px solid var(--line);background:rgba(20,32,50,.65);white-space:nowrap;transition:all .14s;}
+.tbi:hover{color:var(--text);border-color:var(--line-2);}
+.tbi.act{color:var(--accent);border-color:rgba(91,140,255,.38);background:rgba(91,140,255,.11);}
+.tray{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.tray .ic{color:var(--muted-2);display:flex;}
+.tb-clock{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);text-align:right;line-height:1.25;}
+.tb-clock small{display:block;font-size:9px;color:var(--muted-2);}
+
+.startmenu{position:absolute;bottom:55px;left:12px;width:296px;z-index:60;
+  background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--line-2);
+  border-radius:14px;padding:11px;box-shadow:0 28px 74px rgba(0,0,0,.72);display:none;animation:wo .2s ease;}
+.startmenu.on{display:block;}
+.sm-h{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted-2);padding:6px 9px 9px;}
+.sm-i{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:9px;
+  font-size:13px;transition:background .14s;width:100%;text-align:left;}
+.sm-i:hover{background:rgba(91,140,255,.13);}
+.sm-i .e{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;flex-shrink:0;border:1px solid;}
+.sm-sep{height:1px;background:var(--line);margin:7px 4px;}
+.hint{position:absolute;bottom:14px;right:16px;font-family:'JetBrains Mono',monospace;
+  font-size:9.5px;color:#31465F;letter-spacing:.1em;z-index:1;}
+
+@media(max-width:760px){
+  .icons{gap:4px;top:12px;left:12px;}
+  .dico{width:76px;padding:8px 4px;}
+  .dico .gl{width:37px;height:37px;font-size:17px;}
+  .dico .lb{font-size:9.5px;}
+  .startb .lbl{display:none;}
+  .tb-clock small{display:none;}
+  .win-body{padding:16px 16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ BOOT ════════ -->
+<div class="stage on" id="boot">
+  <div class="boot-inner">
+    <div class="bl" id="bootText"></div>
+    <div class="bp" id="bootPrompt" style="display:none;">▸ PRESS <b>ANY KEY</b> TO CONTINUE</div>
+  </div>
+  <button class="skip" id="skipBtn">SKIP ▸</button>
+</div>
+
+<!-- ════════ OFFICE ════════ -->
+<div class="stage" id="office">
+
+  <svg id="scene" viewBox="0 0 1200 750" preserveAspectRatio="xMidYMid slice"
+       xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2A4468"/><stop offset="62%" stop-color="#1F3251"/>
+        <stop offset="100%" stop-color="#182740"/>
+      </linearGradient>
+      <linearGradient id="floorG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1D3049"/><stop offset="100%" stop-color="#12202F"/>
+      </linearGradient>
+      <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#20365C"/><stop offset="55%" stop-color="#152444"/>
+        <stop offset="100%" stop-color="#101B33"/>
+      </linearGradient>
+      <linearGradient id="deskG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#D9915A"/><stop offset="100%" stop-color="#BE7A46"/>
+      </linearGradient>
+      <linearGradient id="scrG" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#123A55"/><stop offset="100%" stop-color="#0C2A42"/>
+      </linearGradient>
+      <radialGradient id="lampG" cx="50%" cy="0%" r="72%">
+        <stop offset="0%" stop-color="rgba(255,196,107,.5)"/>
+        <stop offset="100%" stop-color="rgba(255,196,107,0)"/>
+      </radialGradient>
+      <radialGradient id="monG" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(90,190,255,.42)"/>
+        <stop offset="100%" stop-color="rgba(90,190,255,0)"/>
+      </radialGradient>
+      <radialGradient id="vigG" cx="50%" cy="46%" r="66%">
+        <stop offset="55%" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="100%" stop-color="rgba(4,9,17,.72)"/>
+      </radialGradient>
+      <clipPath id="winClip"><rect x="96" y="112" width="228" height="200" rx="7"/></clipPath>
+    </defs>
+
+    <!-- ROOM SHELL -->
+    <rect x="0" y="0" width="1200" height="560" fill="url(#wallG)"/>
+    <rect x="0" y="556" width="1200" height="200" fill="url(#floorG)"/>
+    <rect x="0" y="548" width="1200" height="14" fill="#33517A"/>
+    <rect x="0" y="548" width="1200" height="4" fill="#3F6191"/>
+
+    <!-- floor boards -->
+    <g stroke="#152537" stroke-width="2" opacity=".55">
+      <line x1="120" y1="562" x2="30"  y2="750"/>
+      <line x1="360" y1="562" x2="320" y2="750"/>
+      <line x1="600" y1="562" x2="600" y2="750"/>
+      <line x1="840" y1="562" x2="880" y2="750"/>
+      <line x1="1080" y1="562" x2="1170" y2="750"/>
+    </g>
+
+    <!-- ══ FAR LAYER ══ -->
+    <g class="pl" data-depth="5">
+
+      <!-- WINDOW -->
+      <g>
+        <rect x="88" y="104" width="244" height="216" rx="11" fill="#2E4A72" stroke="#0D1826" stroke-width="4"/>
+        <rect x="96" y="112" width="228" height="200" rx="7" fill="url(#skyG)"/>
+        <g clip-path="url(#winClip)">
+          <!-- moon -->
+          <circle cx="270" cy="152" r="19" fill="#F2E6C4" opacity=".92"/>
+          <circle cx="262" cy="147" r="4" fill="#DED0A9" opacity=".7"/>
+          <circle cx="276" cy="160" r="3" fill="#DED0A9" opacity=".55"/>
+          <!-- stars -->
+          <g fill="#DCEBFF">
+            <circle cx="120" cy="140" r="1.6" opacity=".8"/><circle cx="160" cy="126" r="1.2" opacity=".6"/>
+            <circle cx="196" cy="152" r="1.5" opacity=".75"/><circle cx="140" cy="176" r="1.1" opacity=".5"/>
+            <circle cx="222" cy="130" r="1.3" opacity=".65"/><circle cx="304" cy="186" r="1.4" opacity=".6"/>
+          </g>
+          <!-- skyline -->
+          <g>
+            <rect x="96"  y="236" width="40" height="80" fill="#101C33"/>
+            <rect x="140" y="206" width="30" height="110" fill="#0D1829"/>
+            <rect x="174" y="252" width="42" height="64" fill="#101C33"/>
+            <rect x="220" y="188" width="34" height="128" fill="#0C1626"/>
+            <rect x="258" y="240" width="28" height="76" fill="#101C33"/>
+            <rect x="290" y="214" width="36" height="102" fill="#0D1829"/>
+            <g fill="#FFCE7A">
+              <rect x="104" y="246" width="5" height="6" opacity=".8"/><rect x="118" y="262" width="5" height="6" opacity=".55"/>
+              <rect x="148" y="216" width="5" height="6" opacity=".75"/><rect x="158" y="240" width="5" height="6" opacity=".5"/>
+              <rect x="148" y="272" width="5" height="6" opacity=".65"/><rect x="184" y="264" width="5" height="6" opacity=".6"/>
+              <rect x="200" y="286" width="5" height="6" opacity=".5"/><rect x="228" y="198" width="5" height="6" opacity=".8"/>
+              <rect x="240" y="224" width="5" height="6" opacity=".6"/><rect x="228" y="256" width="5" height="6" opacity=".55"/>
+              <rect x="266" y="252" width="5" height="6" opacity=".7"/><rect x="300" y="226" width="5" height="6" opacity=".6"/>
+              <rect x="312" y="256" width="5" height="6" opacity=".5"/>
+            </g>
+          </g>
+          <!-- rain -->
+          <g id="rainG" stroke="#9CC6FF" stroke-width="1.6" stroke-linecap="round" opacity=".5"></g>
+        </g>
+        <!-- mullions -->
+        <rect x="206" y="112" width="6" height="200" fill="#2E4A72"/>
+        <rect x="96" y="204" width="228" height="6" fill="#2E4A72"/>
+        <rect x="88" y="104" width="244" height="216" rx="11" fill="none" stroke="#0D1826" stroke-width="4"/>
+        <!-- sill -->
+        <rect x="78" y="316" width="264" height="12" rx="4" fill="#3A5C8A" stroke="#0D1826" stroke-width="3.5"/>
+      </g>
+
+      <!-- WALL CLOCK -->
+      <g transform="translate(560,96)">
+        <circle r="34" fill="#E8EEF7" stroke="#0D1826" stroke-width="4"/>
+        <circle r="27" fill="#F7FAFE"/>
+        <g stroke="#4A6285" stroke-width="2.6" stroke-linecap="round">
+          <line x1="0" y1="-22" x2="0" y2="-18"/><line x1="22" y1="0" x2="18" y2="0"/>
+          <line x1="0" y1="22" x2="0" y2="18"/><line x1="-22" y1="0" x2="-18" y2="0"/>
+        </g>
+        <line id="clkHr" x1="0" y1="0" x2="0" y2="-13" stroke="#22354F" stroke-width="3.6" stroke-linecap="round"/>
+        <line id="clkMn" x1="0" y1="0" x2="0" y2="-20" stroke="#22354F" stroke-width="2.4" stroke-linecap="round"/>
+        <circle r="3" fill="#FF7A72"/>
+      </g>
+
+      <!-- CERTIFICATE -->
+      <g transform="translate(742,96) rotate(-1.2)">
+        <rect x="0" y="0" width="128" height="98" rx="4" fill="#C9A55E" stroke="#0D1826" stroke-width="4"/>
+        <rect x="8" y="8" width="112" height="82" rx="2" fill="#F5EFE0"/>
+        <text x="64" y="28" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="7" letter-spacing="1.6" fill="#A6812F">CERTIFICATE</text>
+        <text x="64" y="47" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#2B3A50">A.A.S.</text>
+        <text x="64" y="60" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="8.5" font-weight="600" fill="#42566F">Information Tech</text>
+        <text x="64" y="74" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="6" letter-spacing=".8" fill="#7B8CA3">IN PROGRESS</text>
+        <circle cx="64" cy="83" r="5" fill="none" stroke="#C9A55E" stroke-width="1.6"/>
+      </g>
+
+      <!-- WHITEBOARD -->
+      <g transform="translate(920,110)">
+        <rect x="0" y="0" width="196" height="128" rx="7" fill="#EDF3FA" stroke="#0D1826" stroke-width="4"/>
+        <rect x="0" y="0" width="196" height="128" rx="7" fill="none" stroke="#9FB4CE" stroke-width="2"/>
+        <text x="16" y="28" font-family="Space Grotesk, sans-serif" font-size="12" font-weight="700" fill="#2C6FD1">TICKET FLOW</text>
+        <g stroke-linecap="round" stroke-width="4">
+          <line x1="16" y1="46" x2="120" y2="46" stroke="#3D82E0"/>
+          <line x1="16" y1="62" x2="88"  y2="62" stroke="#4CA97A"/>
+          <line x1="16" y1="78" x2="140" y2="78" stroke="#3D82E0"/>
+          <line x1="16" y1="94" x2="70"  y2="94" stroke="#D98C3A"/>
+          <line x1="16" y1="110" x2="108" y2="110" stroke="#4CA97A"/>
+        </g>
+        <circle cx="166" cy="60" r="15" fill="none" stroke="#D9564E" stroke-width="3.4"/>
+        <path d="M158 60 l6 6 l12 -14" fill="none" stroke="#D9564E" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="12" y="132" width="172" height="7" rx="3" fill="#9FB4CE" stroke="#0D1826" stroke-width="3"/>
+      </g>
+    </g>
+
+    <!-- ══ MID LAYER ══ -->
+    <g class="pl" data-depth="13">
+
+      <!-- SERVER RACK -->
+      <g transform="translate(58,272)">
+        <rect x="0" y="0" width="118" height="288" rx="10" fill="#33495F" stroke="#0D1826" stroke-width="4"/>
+        <rect x="9" y="10" width="100" height="268" rx="6" fill="#1B2A3C"/>
+        <g id="rackUnits"></g>
+        <rect x="14" y="288" width="20" height="14" rx="3" fill="#22344A" stroke="#0D1826" stroke-width="3"/>
+        <rect x="84" y="288" width="20" height="14" rx="3" fill="#22344A" stroke="#0D1826" stroke-width="3"/>
+      </g>
+
+      <!-- PLANT -->
+      <g transform="translate(1044,404)">
+        <path d="M18 148 L12 74 H96 L90 148 Z" fill="#C4694A" stroke="#0D1826" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="4" y="60" width="100" height="20" rx="5" fill="#D97A57" stroke="#0D1826" stroke-width="4"/>
+        <g stroke="#2F7D5B" stroke-width="5" fill="none" stroke-linecap="round">
+          <path d="M54 62 C54 34 34 20 18 8"/>
+          <path d="M54 62 C54 30 74 16 92 4"/>
+          <path d="M54 62 C54 36 54 16 54 -8"/>
+        </g>
+        <ellipse cx="16" cy="6"  rx="19" ry="11" fill="#3E9E6C" stroke="#0D1826" stroke-width="3.4" transform="rotate(-34 16 6)"/>
+        <ellipse cx="94" cy="2"  rx="19" ry="11" fill="#348A5E" stroke="#0D1826" stroke-width="3.4" transform="rotate(32 94 2)"/>
+        <ellipse cx="54" cy="-12" rx="18" ry="11" fill="#46AE78" stroke="#0D1826" stroke-width="3.4"/>
+        <ellipse cx="30" cy="38" rx="16" ry="9" fill="#348A5E" stroke="#0D1826" stroke-width="3.2" transform="rotate(-22 30 38)"/>
+        <ellipse cx="80" cy="34" rx="16" ry="9" fill="#3E9E6C" stroke="#0D1826" stroke-width="3.2" transform="rotate(24 80 34)"/>
+      </g>
+
+      <!-- CHAIR back -->
+      <g transform="translate(510,470)">
+        <rect x="0" y="0" width="180" height="96" rx="26" fill="#2F4762" stroke="#0D1826" stroke-width="4.5"/>
+        <rect x="14" y="14" width="152" height="68" rx="18" fill="#3A5878"/>
+        <line x1="90" y1="18" x2="90" y2="78" stroke="#2F4762" stroke-width="4"/>
+      </g>
+    </g>
+
+    <!-- ══ DESK LAYER ══ -->
+    <g class="pl" data-depth="24">
+
+      <!-- LAMP GLOW -->
+      <ellipse cx="960" cy="580" rx="200" ry="120" fill="url(#lampG)"/>
+      <!-- MONITOR GLOW -->
+      <ellipse cx="600" cy="560" rx="290" ry="150" fill="url(#monG)"/>
+
+      <!-- DESK -->
+      <rect x="80" y="556" width="1040" height="34" rx="9" fill="url(#deskG)" stroke="#0D1826" stroke-width="4.5"/>
+      <rect x="88" y="562" width="1024" height="9" rx="4" fill="#E8A468" opacity=".55"/>
+      <rect x="120" y="590" width="26" height="160" fill="#A96A3C" stroke="#0D1826" stroke-width="4"/>
+      <rect x="1054" y="590" width="26" height="160" fill="#A96A3C" stroke="#0D1826" stroke-width="4"/>
+
+      <!-- DESK LAMP -->
+      <g transform="translate(902,428)">
+        <rect x="18" y="122" width="72" height="9" rx="4" fill="#E0913F" stroke="#0D1826" stroke-width="3.6"/>
+        <line x1="54" y1="122" x2="54" y2="60" stroke="#E0913F" stroke-width="7" stroke-linecap="round"/>
+        <line x1="54" y1="62" x2="18" y2="30" stroke="#E0913F" stroke-width="7" stroke-linecap="round"/>
+        <path d="M-16 6 L52 6 L36 42 L0 42 Z" fill="#EDA24A" stroke="#0D1826" stroke-width="3.8" stroke-linejoin="round"/>
+        <ellipse cx="18" cy="42" rx="18" ry="5" fill="#FFE0A0" opacity=".85"/>
+      </g>
+
+      <!-- MONITOR (hotspot) -->
+      <g class="hot" id="monHot">
+        <ellipse class="hl" cx="600" cy="558" rx="250" ry="42" fill="rgba(91,140,255,.28)"/>
+        <!-- stand -->
+        <path d="M578 528 L622 528 L634 556 L566 556 Z" fill="#3A4F68" stroke="#0D1826" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="540" y="550" width="120" height="12" rx="5" fill="#445C78" stroke="#0D1826" stroke-width="4"/>
+        <!-- body -->
+        <rect x="424" y="326" width="352" height="212" rx="16" fill="#37506D" stroke="#0D1826" stroke-width="5"/>
+        <rect x="438" y="340" width="324" height="172" rx="8" fill="url(#scrG)"/>
+        <!-- screen content -->
+        <g font-family="JetBrains Mono, monospace" font-size="10.5">
+          <rect x="438" y="340" width="324" height="22" rx="8" fill="#0A2438"/>
+          <circle cx="454" cy="351" r="4" fill="#FF6B5F"/><circle cx="468" cy="351" r="4" fill="#FFC53D"/><circle cx="482" cy="351" r="4" fill="#42D06B"/>
+          <text x="600" y="355" text-anchor="middle" font-size="8" fill="#5E86A8" letter-spacing="1">HELP DESK</text>
+          <g id="scrLines"></g>
+        </g>
+        <!-- sheen -->
+        <path d="M438 340 L560 340 L470 512 L438 512 Z" fill="#8FD4FF" opacity=".05"/>
+        <!-- power led -->
+        <circle cx="600" cy="527" r="4" fill="#4ADE9B"><animate attributeName="opacity" values="1;.3;1" dur="2.6s" repeatCount="indefinite"/></circle>
+      </g>
+
+      <!-- KEYBOARD -->
+      <g transform="translate(474,592)">
+        <rect x="0" y="0" width="252" height="66" rx="10" fill="#3E5673" stroke="#0D1826" stroke-width="4.5"/>
+        <g id="keys"></g>
+        <rect x="76" y="48" width="100" height="10" rx="4" fill="#57769B" stroke="#22354F" stroke-width="1.6"/>
+      </g>
+
+      <!-- MOUSE -->
+      <g transform="translate(756,600)">
+        <ellipse cx="20" cy="22" rx="20" ry="26" fill="#445C78" stroke="#0D1826" stroke-width="4"/>
+        <line x1="20" y1="4" x2="20" y2="20" stroke="#22354F" stroke-width="3" stroke-linecap="round"/>
+      </g>
+
+      <!-- COFFEE MUG -->
+      <g transform="translate(830,556)">
+        <g id="steamG" opacity=".75">
+          <path d="M14 -6 C6 -18 22 -26 14 -40" stroke="#CFE3FF" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".55">
+            <animate attributeName="opacity" values="0;.6;0" dur="3.4s" repeatCount="indefinite"/></path>
+          <path d="M34 -8 C26 -22 42 -30 34 -46" stroke="#CFE3FF" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".4">
+            <animate attributeName="opacity" values="0;.5;0" dur="3.4s" begin="1.1s" repeatCount="indefinite"/></path>
+        </g>
+        <path d="M52 4 q16 2 16 16 q0 14 -16 16" fill="none" stroke="#0D1826" stroke-width="4"/>
+        <path d="M52 8 q11 2 11 12 q0 10 -11 12" fill="none" stroke="#E05A4A" stroke-width="6"/>
+        <rect x="4" y="0" width="50" height="46" rx="8" fill="#E05A4A" stroke="#0D1826" stroke-width="4"/>
+        <rect x="10" y="6" width="38" height="7" rx="3" fill="#4A2A1E"/>
+        <text x="29" y="34" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" fill="#FFE2DC">IT</text>
+      </g>
+
+      <!-- DESK PHONE -->
+      <g transform="translate(214,558)">
+        <rect x="0" y="14" width="92" height="40" rx="8" fill="#3A5271" stroke="#0D1826" stroke-width="4"/>
+        <rect x="6" y="2" width="80" height="18" rx="9" fill="#456084" stroke="#0D1826" stroke-width="4"/>
+        <g fill="#22354F">
+          <rect x="14" y="28" width="9" height="7" rx="2"/><rect x="28" y="28" width="9" height="7" rx="2"/>
+          <rect x="42" y="28" width="9" height="7" rx="2"/><rect x="14" y="40" width="9" height="7" rx="2"/>
+          <rect x="28" y="40" width="9" height="7" rx="2"/><rect x="42" y="40" width="9" height="7" rx="2"/>
+        </g>
+        <circle cx="76" cy="38" r="5" fill="#FF7A72"><animate attributeName="opacity" values="1;.15;1" dur="1.4s" repeatCount="indefinite"/></circle>
+      </g>
+
+      <!-- STICKY NOTES -->
+      <g transform="translate(340,566) rotate(-5)">
+        <rect x="0" y="0" width="66" height="60" rx="3" fill="#F2D34E" stroke="#0D1826" stroke-width="3.4"/>
+        <text x="33" y="22" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#5C4A10">verify</text>
+        <text x="33" y="36" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" font-weight="600" fill="#5C4A10">THEN</text>
+        <text x="33" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#5C4A10">reset</text>
+      </g>
+      <g transform="translate(396,572) rotate(6)">
+        <rect x="0" y="0" width="62" height="56" rx="3" fill="#63D3E0" stroke="#0D1826" stroke-width="3.4"/>
+        <text x="31" y="22" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#0E4A52">check</text>
+        <text x="31" y="35" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#0E4A52">power</text>
+        <text x="31" y="48" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8.5" font-weight="600" fill="#0E4A52">FIRST</text>
+      </g>
+
+      <!-- ID BADGE -->
+      <g transform="translate(922,570) rotate(7)">
+        <rect x="0" y="0" width="74" height="52" rx="6" fill="#EDF3FA" stroke="#0D1826" stroke-width="3.6"/>
+        <rect x="0" y="0" width="74" height="13" rx="6" fill="#5B8CFF"/>
+        <rect x="0" y="8" width="74" height="5" fill="#5B8CFF"/>
+        <rect x="7" y="19" width="18" height="22" rx="3" fill="#9FB6D4"/>
+        <circle cx="16" cy="26" r="4.5" fill="#DCE7F5"/>
+        <path d="M9 40 q7 -8 14 0 z" fill="#DCE7F5"/>
+        <text x="31" y="27" font-family="Space Grotesk, sans-serif" font-size="7.5" font-weight="700" fill="#2B3A50">JAYLEN</text>
+        <text x="31" y="36" font-family="Space Grotesk, sans-serif" font-size="7.5" font-weight="700" fill="#2B3A50">SHERRILL</text>
+        <text x="31" y="45" font-family="JetBrains Mono, monospace" font-size="5.5" fill="#7B8CA3">ID · 0142</text>
+      </g>
+
+      <!-- RUBBER DUCK -->
+      <g transform="translate(772,548)">
+        <ellipse cx="16" cy="18" rx="17" ry="13" fill="#FFD64A" stroke="#0D1826" stroke-width="3.4"/>
+        <circle cx="26" cy="5" r="10" fill="#FFD64A" stroke="#0D1826" stroke-width="3.4"/>
+        <circle cx="29" cy="3" r="1.8" fill="#0D1826"/>
+        <path d="M35 6 l9 3 l-9 3 z" fill="#F08A28" stroke="#0D1826" stroke-width="2.4" stroke-linejoin="round"/>
+      </g>
+    </g>
+
+    <!-- vignette -->
+    <rect x="0" y="0" width="1200" height="750" fill="url(#vigG)" pointer-events="none"/>
+  </svg>
+
+  <div class="title-o">
+    <div class="to-1">The <em>Help Desk</em> Simulator</div>
+    <div class="to-2">Learn what IT support actually does</div>
+  </div>
+
+  <div class="enter-tip"><span class="rg"></span> CLICK THE MONITOR TO BEGIN</div>
+</div>
+
+<!-- ════════ OS ════════ -->
+<div class="stage" id="os">
+  <div class="desktop" id="desktop">
+    <div class="icons" id="deskIcons"></div>
+    <div class="startmenu" id="startMenu">
+      <div class="sm-h">Help Desk Simulator</div>
+      <div id="smItems"></div>
+      <div class="sm-sep"></div>
+      <button class="sm-i" id="smOffice">
+        <span class="e" style="background:rgba(147,166,190,.12);border-color:rgba(147,166,190,.24);">←</span>
+        Back to the office
+      </button>
+    </div>
+    <div class="hint">DRAG WINDOWS BY THEIR TITLE BAR</div>
+  </div>
+
+  <div class="taskbar">
+    <button class="startb" id="startBtn"><span class="sq"></span><span class="lbl">Start</span></button>
+    <div class="tb-items" id="tbItems"></div>
+    <div class="tray">
+      <span class="ic" title="Network"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5.5 5.5 0 017 0" stroke-linecap="round"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor" stroke="none"/></svg></span>
+      <span class="ic" title="Secure"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span>
+      <div class="tb-clock"><span id="osClock">--:--</span><small id="osDate">—</small></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+/* ═══ CONTENT ═══ */
+const PROJECTS=[
+ {id:'night',file:'night-shift.html',icon:'◐',col:'var(--violet)',name:'Night Shift',kind:'REAL-TIME GAME',
+  p1:"You're the only technician on the overnight shift. Tickets arrive on their own while you work, each with an SLA timer burning down in the background. Let one expire and it drops, costing reputation you can't earn back.",
+  p2:"Each ticket plays out as a <b>conversation with the caller</b>, and every choice returns a verdict explaining why it worked or didn't. The clock runs 22:00 to 06:00 and the shift ends with a graded review.",
+  meta:[['Type','Full game'],['Tickets','6 live'],['Mechanic','SLA + reputation'],['Ranks','D–S']],
+  tags:['Ticket Triage','Prioritisation','Customer Comms'],cta:'Clock in'},
+ {id:'phish',file:'phishing-inspector.html',icon:'⚑',col:'var(--red)',name:'Phishing Inspector',kind:'DETECTION GAME',
+  p1:"Six messages land in a mock inbox. Click any text that looks wrong — a lookalike sender domain, a manufactured deadline, a link that doesn't go where it claims — then decide whether to report it or mark it safe.",
+  p2:"Two of the six are <b>completely legitimate</b>, and that's the hard part. Over-flagging real mail floods the reporting channel and trains people to ignore warnings, so clicking innocent things costs you.",
+  meta:[['Type','Detection game'],['Messages','6 rounds'],['Red flags','20+'],['Ranks','D–S']],
+  tags:['Security Awareness','Phishing','Judgement'],cta:'Inspect the inbox'},
+ {id:'lab',file:'homelab-architect.html',icon:'▤',col:'var(--cyan)',name:'Homelab Architect',kind:'DESIGN TOOL',
+  p1:"Assemble a 12U rack from a hardware catalog, install services onto your hosts, and watch topology, power draw and monthly running cost recalculate on every change.",
+  p2:"The advisor is the real point. Eighteen rules grade the finished design and explain the reasoning — <b>no firewall in the path, no backups, DNS as a single point of failure, power draw too high</b>.",
+  meta:[['Type','Build tool'],['Hardware','9 items'],['Services','12'],['Rules','18 checks']],
+  tags:['Infrastructure','Networking','Design Thinking'],cta:'Open the architect'},
+ {id:'audit',file:'ticket-tracker.html',icon:'▦',col:'var(--accent)',name:'Ticket & Audit Log Tracker',kind:'COMPLIANCE TOOL',
+  p1:"A working queue with a compliance twist. Log a ticket, move it Open → In Progress → Resolved → Closed, and every status change is permanently appended to a trail that can't be edited afterward.",
+  p2:"That append-only design is the whole idea. <b>An audit log someone can quietly rewrite isn't an audit log</b> — it's a status field. Export dumps everything to CSV.",
+  meta:[['Type','Web app'],['Concept','Append-only'],['Export','CSV'],['Storage','Local']],
+  tags:['Documentation','Audit Trails','GRC'],cta:'Open the tracker'},
+ {id:'vocab',file:'it-vocab.html',icon:'◆',col:'var(--amber)',name:'IT Vocab Trainer',kind:'REFERENCE TOOL',
+  p1:"28 core terms — VOIP, VPN, DHCP, VLAN, peripherals, phishing, audit trails — across three modes. Flashcards flip in 3D and push anything marked \"review\" back into the deck.",
+  p2:"Every entry carries two definitions: the formal one, and a <b>plain-English line</b> underneath written the way you'd say it out loud. Filter by category to drill one area.",
+  meta:[['Type','Reference'],['Terms','28'],['Modes','3'],['Filters','By category']],
+  tags:['Terminology','Fundamentals','Study Aid'],cta:'Open the trainer'},
+ {id:'drill',file:'helpdesk-sim.html',icon:'◈',col:'var(--green)',name:'Triage Drill',kind:'UNTIMED PRACTICE',
+  p1:"A no-clock version of the same idea: six scenarios worked one step at a time with nothing counting down.",
+  p2:"Wrong answers are the point. Each returns a short explanation of the correct move and why, so a miss teaches as much as a hit.",
+  meta:[['Type','Practice sim'],['Scenarios','6'],['Steps each','3–4'],['Timer','None']],
+  tags:['Troubleshooting','Escalation','Fundamentals'],cta:'Start the drill'}
+];
+
+/* ═══ BOOT ═══ */
+const BOOT=[
+ ['HELP DESK SIMULATOR · v1.0','hi'],
+ ['',''],
+ ['Loading front desk .......... ','',' <span class="ok">OK</span>'],
+ ['Ticket queue ................ ','',' <span class="ok">ONLINE</span>'],
+ ['Phone lines ................. ','',' <span class="ok">RINGING</span>'],
+ ['Knowledge base .............. ','',' <span class="ok">LOADED</span>'],
+ ['Coffee ...................... ','',' <span class="wr">LOW</span>'],
+ ['',''],
+ ['<span class="ac">Welcome. Your shift starts now.</span>','']
+];
+let bi=0,bd=false;
+function bstep(){
+  if(bi>=BOOT.length){bfin();return;}
+  const [t,c,s]=BOOT[bi];
+  $('bootText').innerHTML+=(c?`<span class="${c}">${t}</span>`:t)+(s||'')+'\n';
+  bi++; setTimeout(bstep,t===''?60:170+Math.random()*100);
+}
+function bfin(){bd=true;$('bootText').innerHTML+='<span class="cur"></span>';$('bootPrompt').style.display='block';}
+function toOffice(){
+  if(!bd)return;
+  $('boot').classList.remove('on');
+  setTimeout(()=>$('office').classList.add('on'),260);
+  document.removeEventListener('keydown',onBK);
+}
+function onBK(){bd?toOffice():skipB();}
+function skipB(){bi=BOOT.length;$('bootText').innerHTML=BOOT.map(([t,c,s])=>(c?`<span class="${c}">${t}</span>`:t)+(s||'')).join('\n');bfin();}
+document.addEventListener('keydown',onBK);
+$('boot').addEventListener('click',()=>bd?toOffice():skipB());
+$('skipBtn').addEventListener('click',e=>{e.stopPropagation();skipB();});
+bstep();
+
+/* ═══ OFFICE SCENE ═══ */
+const NS='http://www.w3.org/2000/svg';
+// rain
+(function(){
+  const g=$('rainG');
+  for(let i=0;i<26;i++){
+    const x=96+Math.random()*228, y=112+Math.random()*200, len=9+Math.random()*13;
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x); l.setAttribute('y1',y);
+    l.setAttribute('x2',x-3); l.setAttribute('y2',y+len);
+    const a=document.createElementNS(NS,'animateTransform');
+    a.setAttribute('attributeName','transform'); a.setAttribute('type','translate');
+    a.setAttribute('values','0 -60; 0 240'); a.setAttribute('dur',(.55+Math.random()*.6)+'s');
+    a.setAttribute('begin',(Math.random()*1.4)+'s'); a.setAttribute('repeatCount','indefinite');
+    l.appendChild(a); g.appendChild(l);
+  }
+})();
+// rack units
+(function(){
+  const g=$('rackUnits'); const cols=['#4ADE9B','#5B8CFF','#FFC24D','#4ADE9B','#3ADCEF','#4ADE9B','#5B8CFF'];
+  for(let i=0;i<7;i++){
+    const y=20+i*36;
+    const r=document.createElementNS(NS,'rect');
+    r.setAttribute('x',18);r.setAttribute('y',y);r.setAttribute('width',82);r.setAttribute('height',26);
+    r.setAttribute('rx',4);r.setAttribute('fill','#2A3E56');
+    r.setAttribute('stroke','#0D1826');r.setAttribute('stroke-width',3);
+    g.appendChild(r);
+    for(let v=0;v<5;v++){
+      const vt=document.createElementNS(NS,'rect');
+      vt.setAttribute('x',26+v*8);vt.setAttribute('y',y+9);vt.setAttribute('width',4);
+      vt.setAttribute('height',9);vt.setAttribute('rx',2);vt.setAttribute('fill','#1B2A3C');
+      g.appendChild(vt);
+    }
+    const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',90);c.setAttribute('cy',y+13);c.setAttribute('r',4);
+    c.setAttribute('fill',cols[i]);
+    const an=document.createElementNS(NS,'animate');
+    an.setAttribute('attributeName','opacity');an.setAttribute('values','1;.2;1');
+    an.setAttribute('dur',(1.8+Math.random()*1.6)+'s');
+    an.setAttribute('begin',(Math.random()*2)+'s');an.setAttribute('repeatCount','indefinite');
+    c.appendChild(an); g.appendChild(c);
+  }
+})();
+// keyboard keys
+(function(){
+  const g=$('keys');
+  const rows=[[10,10,11],[10,32,10],[10,54,0]];
+  let y=10;
+  for(let r=0;r<2;r++){
+    const n=r===0?11:10;
+    for(let i=0;i<n;i++){
+      const k=document.createElementNS(NS,'rect');
+      k.setAttribute('x',12+i*21);k.setAttribute('y',y);k.setAttribute('width',17);k.setAttribute('height',15);
+      k.setAttribute('rx',3);k.setAttribute('fill',(r===0&&i===0)||(r===1&&i===3)?'#6E9BE8':'#57769B');
+      k.setAttribute('stroke','#22354F');k.setAttribute('stroke-width',2);
+      g.appendChild(k);
+    }
+    y+=20;
+  }
+})();
+// screen lines
+(function(){
+  const g=$('scrLines');
+  const lines=[
+    ['> queue --status',  '#4ADE9B'],
+    ['  6 open tickets',  '#8FB6D8'],
+    ['',''],
+    ['> whoami',          '#4ADE9B'],
+    ['  jaylen',          '#8FB6D8'],
+    ['',''],
+    ['> begin_shift',     '#4ADE9B'],
+    ['  ready_',          '#3ADCEF']
+  ];
+  lines.forEach(([t,c],i)=>{
+    if(!t)return;
+    const tx=document.createElementNS(NS,'text');
+    tx.setAttribute('x',452);tx.setAttribute('y',384+i*17);
+    tx.setAttribute('fill',c);tx.setAttribute('font-size','10.5');
+    tx.setAttribute('font-family','JetBrains Mono, monospace');
+    tx.textContent=t; tx.setAttribute('opacity','0');
+    const an=document.createElementNS(NS,'animate');
+    an.setAttribute('attributeName','opacity');an.setAttribute('from','0');an.setAttribute('to','1');
+    an.setAttribute('dur','.3s');an.setAttribute('begin',(0.5+i*0.28)+'s');an.setAttribute('fill','freeze');
+    tx.appendChild(an); g.appendChild(tx);
+  });
+})();
+// clock
+function oclock(){
+  const n=new Date(),h=n.getHours()%12,m=n.getMinutes();
+  $('clkHr').setAttribute('transform',`rotate(${(h+m/60)*30})`);
+  $('clkMn').setAttribute('transform',`rotate(${m*6})`);
+}
+oclock(); setInterval(oclock,20000);
+// parallax
+document.addEventListener('mousemove',e=>{
+  if(!$('office').classList.contains('on'))return;
+  const px=(e.clientX/window.innerWidth-.5)*2, py=(e.clientY/window.innerHeight-.5)*2;
+  document.querySelectorAll('#scene .pl').forEach(l=>{
+    const d=+l.dataset.depth;
+    l.setAttribute('transform',`translate(${-px*d} ${-py*d*.5})`);
+  });
+});
+$('monHot').addEventListener('click',()=>{
+  $('office').classList.remove('on');
+  setTimeout(()=>$('os').classList.add('on'),290);
+});
+$('smOffice').addEventListener('click',()=>{
+  $('startMenu').classList.remove('on');
+  $('os').classList.remove('on');
+  setTimeout(()=>$('office').classList.add('on'),290);
+});
+
+/* ═══ OS ═══ */
+const APPS={
+  welcome: {t:'welcome.doc',      ico:'☺', col:'var(--amber)', label:'Start Here', w:600, h:540},
+  learn:   {t:'what-is-helpdesk', ico:'?', col:'var(--cyan)',  label:'What Is IT?', w:620, h:540},
+  projects:{t:'simulators.app',   ico:'▤', col:'var(--accent)',label:'Simulators', w:620, h:520},
+  edu:     {t:'education.app',    ico:'✦', col:'var(--violet)',label:'Education', w:520, h:360},
+  contact: {t:'contact.app',      ico:'✉', col:'var(--green)', label:'Contact', w:520, h:320},
+  term:    {t:'terminal',         ico:'>_',col:'var(--muted)', label:'Terminal', w:540, h:380}
+};
+let z=10, open={};
+
+function bodyFor(id){
+if(id==='welcome') return `
+  <div class="hero-w">
+    <h2>Hi, my name is Jaylen Sherrill.</h2>
+    <p>Welcome to my Help Desk Simulator — a place to find out what IT support actually does all day, and to try it yourself.</p>
+  </div>
+  <div class="doc">
+    <p>Most people only meet the help desk when something has already gone wrong. Your laptop won't turn on, you're locked out ten minutes before a meeting, a printer has decided it no longer believes in paper. You call, someone picks up, and somehow it gets fixed.</p>
+    <p>This site is about <b>what happens on the other end of that call</b>.</p>
+    <p>I built a set of small games and tools that put you in that seat. You'll work a night shift with tickets stacking up, decide whether an email is a scam, design a small server setup, and learn the vocabulary the job runs on. Nothing here needs any background — <b>if you've never worked in IT, start with the ones below and you'll pick it up as you go.</b></p>
+    <div class="callout">
+      <b>New here? Do this.</b>
+      <p>Open <b>What Is IT?</b> for a two-minute explanation of the job, then open <b>Simulators</b> and play Night Shift. That's the whole experience in about ten minutes.</p>
+    </div>
+    <p>Have fun with it. Getting a ticket wrong here costs you nothing, which is exactly why it's worth practising.</p>
+    <div class="sig">— <b>Jaylen Sherrill</b>, Nashville, TN</div>
+  </div>`;
+
+if(id==='learn') return `
+  <div class="wh">What Is a Help Desk?</div>
+  <div class="wsub">The short version, in plain English.</div>
+  <div class="doc">
+    <p>A <b>help desk</b> is the front door of a company's technology. When something breaks, someone can't log in, or a piece of equipment stops behaving, the help desk is who they contact. It's part troubleshooting, part detective work, and a surprisingly large part talking to people who are having a bad morning.</p>
+
+    <div class="sect">How a ticket actually moves</div>
+    <ul>
+      <li><span class="n">1</span><span class="tx"><b>Someone reports a problem</b>A call, an email, or a form. This creates a <b>ticket</b> — a written record of the issue that follows it from start to finish.</span></li>
+      <li><span class="n">2</span><span class="tx"><b>It gets prioritised</b>A single broken mouse and a phone line that dispatches emergency crews are not the same emergency. Priority decides what gets touched first.</span></li>
+      <li><span class="n">3</span><span class="tx"><b>Someone works it</b>Ask questions, rule out the cheap and obvious causes, then narrow down. Most problems are far simpler than they first appear.</span></li>
+      <li><span class="n">4</span><span class="tx"><b>It's fixed or escalated</b>If it's beyond the first person's tools or access, it goes to a specialist — with notes attached, so nobody repeats work already done.</span></li>
+      <li><span class="n">5</span><span class="tx"><b>It's documented and closed</b>Write down what happened and what fixed it, so the next person solves it in a minute instead of an hour.</span></li>
+    </ul>
+
+    <div class="sect">Words you'll hear constantly</div>
+    <ul>
+      <li><span class="n">◆</span><span class="tx"><b>Ticket</b>The record of one problem, from reported to resolved.</span></li>
+      <li><span class="n">◆</span><span class="tx"><b>SLA</b>Service Level Agreement — the promise about how fast something gets handled. Critical issues have short clocks.</span></li>
+      <li><span class="n">◆</span><span class="tx"><b>Escalation</b>Handing an issue to someone with more access or expertise. Knowing when to escalate is a skill, not a failure.</span></li>
+      <li><span class="n">◆</span><span class="tx"><b>Tier 1 / Tier 2</b>Tier 1 is the front desk and handles most things. Tier 2 is the specialist behind them.</span></li>
+      <li><span class="n">◆</span><span class="tx"><b>Knowledge base</b>The written library of fixes, so solutions aren't rediscovered from scratch every time.</span></li>
+    </ul>
+
+    <div class="sect">The two rules that matter most</div>
+    <div class="callout">
+      <b>1 · Verify before you change anything.</b>
+      <p>Never reset a password or grant access until you know who you're really talking to. Attackers phone help desks pretending to be stressed employees precisely because urgency makes people skip this step.</p>
+    </div>
+    <div class="callout">
+      <b>2 · Check the simple thing first.</b>
+      <p>Is it plugged in? Is it powered on? Is the cable seated? An enormous share of "broken" equipment is something small and free to check — and checking costs thirty seconds, while replacing hardware costs hundreds of dollars.</p>
+    </div>
+
+    <p>Everything in the <b>Simulators</b> window is built around those ideas. The fastest way to understand the job is to sit in the chair for a few minutes.</p>
+  </div>`;
+
+if(id==='projects') return `
+  <div class="wh">Simulators &amp; Tools</div>
+  <div class="wsub">Six ways to try the job. Four are interactive — open one and play.</div>
+  ${PROJECTS.map(p=>`
+  <div class="prj" data-prj="${p.id}">
+    <div class="prj-h">
+      <div class="prj-ic" style="color:${p.col};background:color-mix(in srgb, ${p.col} 13%, transparent);border-color:color-mix(in srgb, ${p.col} 34%, transparent)">${p.icon}</div>
+      <div class="prj-t"><div class="n">${p.name}</div><div class="k">${p.kind}</div></div>
+      <span class="prj-cv">▶</span>
+    </div>
+    <div class="prj-b"><div class="prj-bi">
+      <p>${p.p1}</p><p>${p.p2}</p>
+      <div class="mg">${p.meta.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+      <div class="tgs">${p.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>
+      <a class="launch" href="${p.file}" target="_blank">▶ ${p.cta}</a>
+    </div></div>
+  </div>`).join('')}`;
+
+if(id==='edu') return `
+  <div class="wh">Education</div><div class="wsub">Where I am in formal training.</div>
+  <div class="rec">
+    <div class="rec-i" style="color:var(--accent);background:rgba(91,140,255,.11);border-color:rgba(91,140,255,.26)">✦</div>
+    <div class="rec-c"><h4>A.A.S., Information Technology</h4>
+    <div class="sb">NASHVILLE STATE COMMUNITY COLLEGE · 2024–PRESENT</div>
+    <p>Coursework in IT fundamentals, systems and networking.</p></div>
+    <span class="rst" style="color:var(--amber);background:rgba(255,194,77,.1);border-color:rgba(255,194,77,.26)">IN PROGRESS</span>
+  </div>
+  <div class="rec">
+    <div class="rec-i" style="color:var(--cyan);background:rgba(58,220,239,.11);border-color:rgba(58,220,239,.26)">◈</div>
+    <div class="rec-c"><h4>CompTIA Network+</h4><div class="sb">EXAM PLANNED 2026</div>
+    <p>Actively preparing.</p></div>
+    <span class="rst" style="color:var(--amber);background:rgba(255,194,77,.1);border-color:rgba(255,194,77,.26)">STUDYING</span>
+  </div>
+  <div class="rec">
+    <div class="rec-i" style="color:var(--muted);background:rgba(147,166,190,.08);border-color:rgba(147,166,190,.2)">○</div>
+    <div class="rec-c"><h4>CompTIA A+</h4><div class="sb">PLANNED NEXT</div>
+    <p>The next target after Network+.</p></div>
+    <span class="rst" style="color:var(--muted);background:rgba(147,166,190,.08);border-color:rgba(147,166,190,.2)">PLANNED</span>
+  </div>`;
+
+if(id==='contact') return `
+  <div class="wh">Contact</div><div class="wsub">Nashville, TN.</div>
+  <div class="cc">
+    <a class="card" href="mailto:jaylenbaylen@icloud.com"><div class="k">Email</div><div class="v">jaylenbaylen@icloud.com</div></a>
+    <a class="card" href="tel:6159109432"><div class="k">Phone</div><div class="v">615-910-9432</div></a>
+    <a class="card" href="https://www.linkedin.com/in/jaylen-sherrill-b91636327" target="_blank" rel="noopener"><div class="k">LinkedIn</div><div class="v">jaylen-sherrill →</div></a>
+    <a class="card" href="resume.pdf" target="_blank"><div class="k">Résumé</div><div class="v">Download PDF ↓</div></a>
+  </div>`;
+
+if(id==='term') return `<div class="term-out" id="termOut"><span class="c">help desk simulator</span> — type <span class="w">help</span> for commands
+</div><div class="term-in"><span>$</span><input id="termIn" autocomplete="off" spellcheck="false"></div>`;
+return '';
+}
+
+function openWin(id){
+  if(open[id]){const e=$('w-'+id);e.classList.remove('min');focusWin(id);return;}
+  const a=APPS[id], d=$('desktop');
+  const w=Math.min(a.w,d.clientWidth-40), h=Math.min(a.h,d.clientHeight-40);
+  const n=Object.keys(open).length;
+  const left=Math.min(Math.max(20,110+n*26),Math.max(20,d.clientWidth-w-20));
+  const top=Math.min(Math.max(16,34+n*22),Math.max(16,d.clientHeight-h-16));
+  const el=document.createElement('div');
+  el.className='win'; el.id='w-'+id;
+  el.style.cssText=`left:${left}px;top:${top}px;width:${w}px;height:${h}px;z-index:${++z}`;
+  el.innerHTML=`<div class="win-bar">
+      <div style="display:flex;gap:6px">
+        <span class="wb-d r" data-act="close"></span>
+        <span class="wb-d y" data-act="min"></span>
+        <span class="wb-d g" data-act="max"></span>
+      </div>
+      <div class="win-ttl">${a.t}</div><div style="width:44px"></div>
+    </div><div class="win-body">${bodyFor(id)}</div>`;
+  d.appendChild(el); open[id]=true;
+  el.querySelectorAll('.wb-d').forEach(b=>b.addEventListener('click',ev=>{
+    ev.stopPropagation(); const act=b.dataset.act;
+    if(act==='close')closeWin(id);
+    if(act==='min'){el.classList.add('min');renderTabs();}
+    if(act==='max'){
+      if(el.dataset.maxed){el.style.cssText=el.dataset.prev+`;z-index:${++z}`;delete el.dataset.maxed;}
+      else{el.dataset.prev=el.style.cssText.replace(/z-index:\d+;?/,'');
+        el.style.cssText=`left:12px;top:12px;width:${d.clientWidth-24}px;height:${d.clientHeight-24}px;z-index:${++z}`;
+        el.dataset.maxed='1';}
+    }
+  }));
+  el.addEventListener('mousedown',()=>focusWin(id));
+  makeDrag(el,el.querySelector('.win-bar'));
+  if(id==='projects')wireProjects(el);
+  if(id==='term')wireTerm(el);
+  renderTabs();
+}
+function closeWin(id){const e=$('w-'+id);if(!e)return;e.classList.add('closing');
+  setTimeout(()=>{e.remove();delete open[id];renderTabs();},180);}
+function focusWin(id){const e=$('w-'+id);if(e){e.style.zIndex=++z;renderTabs();}}
+function makeDrag(el,h){
+  let sx,sy,ox,oy,dr=false;
+  h.addEventListener('pointerdown',e=>{
+    if(e.target.classList.contains('wb-d'))return;
+    dr=true;sx=e.clientX;sy=e.clientY;ox=el.offsetLeft;oy=el.offsetTop;
+    el.style.zIndex=++z; h.setPointerCapture(e.pointerId);
+  });
+  h.addEventListener('pointermove',e=>{
+    if(!dr)return; const d=$('desktop');
+    let nx=ox+e.clientX-sx, ny=oy+e.clientY-sy;
+    nx=Math.max(-el.offsetWidth+90,Math.min(nx,d.clientWidth-70));
+    ny=Math.max(0,Math.min(ny,d.clientHeight-38));
+    el.style.left=nx+'px'; el.style.top=ny+'px';
+  });
+  h.addEventListener('pointerup',e=>{dr=false;h.releasePointerCapture(e.pointerId);});
+}
+function wireProjects(el){
+  el.querySelectorAll('.prj').forEach(p=>{
+    const hd=p.querySelector('.prj-h'), bd=p.querySelector('.prj-b');
+    hd.addEventListener('click',()=>{
+      const o=p.classList.contains('op');
+      el.querySelectorAll('.prj').forEach(x=>{x.classList.remove('op');x.querySelector('.prj-b').style.maxHeight=null;});
+      if(!o){p.classList.add('op');bd.style.maxHeight=bd.scrollHeight+'px';}
+    });
+  });
+  const f=el.querySelector('.prj'); if(f)f.querySelector('.prj-h').click();
+}
+function wireTerm(el){
+  const out=el.querySelector('#termOut'), inp=el.querySelector('#termIn');
+  setTimeout(()=>inp.focus(),60);
+  el.addEventListener('click',e=>{if(!e.target.closest('a'))inp.focus();});
+  const say=h=>{out.innerHTML+=h+'\n';out.parentElement.scrollTop=out.parentElement.scrollHeight;};
+  inp.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const raw=inp.value.trim(); inp.value='';
+    say(`<span class="p">$</span> ${raw}`);
+    const [c,...r]=raw.toLowerCase().split(/\s+/); const arg=r.join(' ');
+    if(!c){}
+    else if(c==='help')say(`<span class="w">help</span>      this list
+<span class="w">ls</span>        list simulators
+<span class="w">open</span> <span class="c">&lt;n&gt;</span>  launch one by number
+<span class="w">about</span>     what a help desk is
+<span class="w">whoami</span>    who made this
+<span class="w">contact</span>   how to reach me
+<span class="w">clear</span>     clear the screen`);
+    else if(c==='ls')say(PROJECTS.map((p,i)=>`  <span class="a">${i+1}</span>. ${p.name} <span class="c">— ${p.kind.toLowerCase()}</span>`).join('\n'));
+    else if(c==='open'){
+      const n=parseInt(arg,10);
+      const p=PROJECTS[n-1]||PROJECTS.find(x=>x.name.toLowerCase().includes(arg)||x.id===arg);
+      if(p){say(`  launching <span class="t">${p.name}</span>…`);window.open(p.file,'_blank');}
+      else say(`  <span class="w">not found</span> — try <span class="c">ls</span>`);
+    }
+    else if(c==='about')say(`  a help desk is the front door of a company's
+  technology. someone reports a problem, it
+  becomes a ticket, it gets prioritised, worked,
+  escalated if needed, then documented and closed.
+
+  two rules matter most:
+    <span class="t">verify before you change anything</span>
+    <span class="t">check the simple thing first</span>`);
+    else if(c==='whoami')say(`  jaylen sherrill — nashville, tn
+  built this so people could see what the job is like`);
+    else if(c==='contact')say(`  email     jaylenbaylen@icloud.com
+  phone     615-910-9432
+  linkedin  jaylen-sherrill`);
+    else if(c==='clear')out.innerHTML='';
+    else if(c==='exit')closeWin('term');
+    else if(c==='sudo')say(`  <span class="w">nice try.</span>`);
+    else if(c==='coffee')say(`  <span class="w">supply low.</span> refill at the break room.`);
+    else say(`  <span class="w">${c}: command not found</span> — try <span class="c">help</span>`);
+  });
+}
+const ORDER=['welcome','learn','projects','edu','contact','term'];
+function renderIcons(){
+  $('deskIcons').innerHTML=ORDER.map(k=>{const a=APPS[k];
+    return `<button class="dico" data-app="${k}">
+      <div class="gl" style="color:${a.col};background:color-mix(in srgb, ${a.col} 13%, transparent);border-color:color-mix(in srgb, ${a.col} 30%, transparent)">${a.ico}</div>
+      <div class="lb">${a.label}</div></button>`;}).join('');
+  $('deskIcons').querySelectorAll('.dico').forEach(b=>b.addEventListener('click',()=>openWin(b.dataset.app)));
+  $('smItems').innerHTML=ORDER.map(k=>{const a=APPS[k];
+    return `<button class="sm-i" data-app="${k}">
+      <span class="e" style="color:${a.col};background:color-mix(in srgb, ${a.col} 13%, transparent);border-color:color-mix(in srgb, ${a.col} 30%, transparent)">${a.ico}</span>
+      ${a.label}</button>`;}).join('');
+  $('smItems').querySelectorAll('.sm-i').forEach(b=>b.addEventListener('click',()=>{openWin(b.dataset.app);$('startMenu').classList.remove('on');}));
+}
+function renderTabs(){
+  const ks=Object.keys(open);
+  $('tbItems').innerHTML=ks.map(k=>{
+    const e=$('w-'+k);
+    const top=e&&!e.classList.contains('min')&&+e.style.zIndex===z;
+    return `<button class="tbi ${top?'act':''}" data-tb="${k}">${APPS[k].ico} ${APPS[k].label}</button>`;
+  }).join('');
+  $('tbItems').querySelectorAll('.tbi').forEach(b=>b.addEventListener('click',()=>{
+    const e=$('w-'+b.dataset.tb);
+    if(e.classList.contains('min')){e.classList.remove('min');focusWin(b.dataset.tb);}
+    else if(+e.style.zIndex===z){e.classList.add('min');renderTabs();}
+    else focusWin(b.dataset.tb);
+  }));
+}
+$('startBtn').addEventListener('click',e=>{e.stopPropagation();$('startMenu').classList.toggle('on');});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#startMenu')&&!e.target.closest('#startBtn'))$('startMenu').classList.remove('on');
+});
+function osclock(){const n=new Date();
+  $('osClock').textContent=n.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  $('osDate').textContent=n.toLocaleDateString([],{month:'short',day:'numeric'});}
+osclock(); setInterval(osclock,10000);
+renderIcons();
+let seeded=false;
+new MutationObserver(()=>{
+  if($('os').classList.contains('on')&&!seeded){seeded=true;setTimeout(()=>openWin('welcome'),330);}
+}).observe($('os'),{attributes:true,attributeFilter:['class']});
+</script>
+</body>
+</html>
