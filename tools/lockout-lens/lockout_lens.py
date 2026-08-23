@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""
+Watchtower — read auth logs, spot brute-force patterns, block the source.
+
+What this is, plainly: a log-driven packet filter. It watches
+authentication failures, decides which addresses are behaving like an
+attack, and emits nftables rules to drop them.
+
+What it is not: an antivirus. It does not inspect files or detect
+malware. A tool that filters traffic and a tool that scans for viruses
+are different things, and conflating them is how people end up trusting
+software that isn't protecting what they think it is.
+
+Detection is a sliding window: N failures from one address inside T
+seconds. Bans escalate on repeat offences and expire on their own.
+
+Usage:
+    python3 watchtower.py --scan /var/log/auth.log
+    python3 watchtower.py --follow /var/log/auth.log     # run continuously
+    python3 watchtower.py --scan sample.log --apply      # write real rules
+"""
+
+import argparse
+import ipaddress
+import json
+import re
+import sys
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timezone
+from pathlib import Path
+
+# Patterns for the failure lines worth caring about. Successful logins
+# are parsed too, so a single success can clear a noisy-but-legitimate host.
+PATTERNS = [
+    re.compile(r"Failed password for (?:invalid user )?(?P<user>\S+) from (?P<ip>\S+)"),
+    re.compile(r"Invalid user (?P<user>\S+) from (?P<ip>\S+)"),
+    re.compile(r"authentication failure.*rhost=(?P<ip>\S+)"),
+    re.compile(r"(?P<ip>\S+) .*\"(?:GET|POST) /(?:wp-login|admin|\.env)"),
+]
+SUCCESS = re.compile(r"Accepted (?:password|publickey) for (?P<user>\S+) from (?P<ip>\S+)")
+
+THRESHOLD = 5        # failures needed to trigger
+WINDOW = 300         # within this many seconds
+BASE_BAN = 900       # first ban, seconds
+MAX_BAN = 86400      # cap, one day
+
+STATE = Path(__file__).parent / "lockout-state.json"
+RULES = Path(__file__).parent / "lockout-blocks.rules"
+
+# Never ban these. I locked myself out of a VPS with an earlier version of
+# this script and had to rebuild it, so the allowlist is not optional.
+ALLOWLIST = ["127.0.0.1", "::1", "10.0.0.0/8", "192.168.0.0/16", "172.16.0.0/12"]
+
+
+class LockoutLens:
+    def __init__(self, threshold=THRESHOLD, window=WINDOW, allowlist=None):
+        self.threshold = threshold
+        self.window = window
+        self.allow = [ipaddress.ip_network(n) for n in (allowlist or ALLOWLIST)]
+        self.fails = defaultdict(deque)     # ip -> timestamps
+        self.offences = defaultdict(int)    # ip -> how many times banned
+        self.banned = {}                    # ip -> expiry timestamp
+        self.load()
+
+    # ── allowlist ──────────────────────────────────────────────────
+    def allowed(self, ip):
+        try:
+            addr = ipaddress.ip_address(ip)
+        except ValueError:
+            return True  # not a real address, don't act on it
+        return any(addr in net for net in self.allow)
+
+    # ── parsing ────────────────────────────────────────────────────
+    def parse(self, line):
+        m = SUCCESS.search(line)
+        if m:
+            return m.group("ip"), True
+        for pat in PATTERNS:
+            m = pat.search(line)
+            if m:
+                return m.group("ip"), False
+        return None, None
+
+    def feed(self, line, now=None):
+        """Process one log line. Returns an ip if it just got banned."""
+        now = now or time.time()
+        ip, success = self.parse(line)
+        if not ip or self.allowed(ip):
+            return None
+
+        if success:
+            # A real login from this address — clear its record.
+            self.fails.pop(ip, None)
+            return None
+
+        q = self.fails[ip]
+        q.append(now)
+        while q and now - q[0] > self.window:
+            q.popleft()
+
+        if len(q) >= self.threshold and ip not in self.banned:
+            return self.ban(ip, now)
+        return None
+
+    # ── banning ────────────────────────────────────────────────────
+    def ban(self, ip, now=None):
+        now = now or time.time()
+        self.offences[ip] += 1
+        duration = min(MAX_BAN, BASE_BAN * (2 ** (self.offences[ip] - 1)))
+        self.banned[ip] = now + duration
+        self.fails.pop(ip, None)
+        return {"ip": ip, "seconds": duration, "offence": self.offences[ip]}
+
+    def expire(self, now=None):
+        now = now or time.time()
+        gone = [ip for ip, until in self.banned.items() if until <= now]
+        for ip in gone:
+            del self.banned[ip]
+        return gone
+
+    # ── output ─────────────────────────────────────────────────────
+    def ruleset(self):
+        """nftables rules. Written to a file for review, not piped
+        straight into the kernel — a bad regex should not be able to
+        firewall off the whole internet unsupervised."""
+        stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        lines = [
+            f"# Generated by Watchtower at {stamp}",
+            "# Review, then apply with: sudo nft -f lockout-blocks.rules",
+            "table inet lockoutlens {",
+            "  set blocked {",
+            "    type ipv4_addr",
+            "    flags timeout",
+        ]
+        if self.banned:
+            now = time.time()
+            elems = ", ".join(
+                f"{ip} timeout {int(max(1, until - now))}s"
+                for ip, until in sorted(self.banned.items())
+                if ":" not in ip
+            )
+            if elems:
+                lines.append(f"    elements = {{ {elems} }}")
+        lines += [
+            "  }",
+            "  chain input {",
+            "    type filter hook input priority filter; policy accept;",
+            "    ip saddr @blocked counter drop",
+            "  }",
+            "}",
+        ]
+        return "\n".join(lines) + "\n"
+
+    def save(self):
+        STATE.write_text(json.dumps({
+            "banned": self.banned,
+            "offences": dict(self.offences),
+        }, indent=2))
+
+    def load(self):
+        if not STATE.exists():
+            return
+        try:
+            data = json.loads(STATE.read_text())
+            now = time.time()
+            self.banned = {k: v for k, v in data.get("banned", {}).items() if v > now}
+            self.offences = defaultdict(int, data.get("offences", {}))
+        except (json.JSONDecodeError, OSError):
+            pass  # corrupt state is not worth crashing over
+
+
+# ── CLI ─────────────────────────────────────────────────────────────
+
+def report(hit):
+    mins = hit["seconds"] // 60
+    print(f"  BLOCK {hit['ip']:<18} {mins:>4} min   offence #{hit['offence']}")
+
+
+def scan(wt, path, apply_rules):
+    if not path.exists():
+        sys.exit(f"watchtower: no such log: {path}")
+
+    hits, lines = [], 0
+    with path.open(errors="ignore") as fh:
+        for line in fh:
+            lines += 1
+            hit = wt.feed(line)
+            if hit:
+                hits.append(hit)
+                report(hit)
+
+    print(f"\n  {lines:,} lines read")
+    print(f"  {len(hits)} address(es) blocked")
+    print(f"  {len(wt.banned)} currently banned")
+
+    RULES.write_text(wt.ruleset())
+    wt.save()
+    print(f"\n  Rules written to {RULES.name}")
+    if apply_rules:
+        print("  Review them, then run: sudo nft -f lockout-blocks.rules")
+    else:
+        print("  Nothing applied. Pass --apply for the command to run them.")
+
+
+def follow(wt, path):
+    """Tail the log and act as lines arrive. The automated mode."""
+    print(f"Following {path} — Ctrl-C to stop.")
+    with path.open(errors="ignore") as fh:
+        fh.seek(0, 2)
+        last_expiry = time.time()
+        while True:
+            line = fh.readline()
+            if line:
+                hit = wt.feed(line)
+                if hit:
+                    report(hit)
+                    RULES.write_text(wt.ruleset())
+                    wt.save()
+                continue
+
+            time.sleep(0.5)
+            if time.time() - last_expiry > 60:
+                for ip in wt.expire():
+                    print(f"  release {ip}")
+                last_expiry = time.time()
+                wt.save()
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Detect brute-force attempts and block the source.")
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--scan", type=Path, metavar="LOG")
+    g.add_argument("--follow", type=Path, metavar="LOG")
+    ap.add_argument("--threshold", type=int, default=THRESHOLD)
+    ap.add_argument("--window", type=int, default=WINDOW)
+    ap.add_argument("--apply", action="store_true", help="print the command to load the rules")
+    args = ap.parse_args()
+
+    wt = LockoutLens(args.threshold, args.window)
+    try:
+        if args.scan:
+            scan(wt, args.scan, args.apply)
+        else:
+            follow(wt, args.follow)
+    except KeyboardInterrupt:
+        wt.save()
+        print("\nStopped.")
+
+
+if __name__ == "__main__":
+    main()

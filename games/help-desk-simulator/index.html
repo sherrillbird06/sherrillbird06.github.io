@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Help Desk Simulator</title>
+<meta name="description" content="Practice help desk triage and escalation decisions with a running SLA clock.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2213%22%20fill%3D%22%23E2CBA0%22%2F%3E%3Cpath%20d%3D%22M21%2032%20Q29%2018%2044%2022%20Q54%2026%2056%2032%20Q54%2038%2044%2042%20Q29%2046%2021%2032%20Z%22%20fill%3D%22%239E2F1E%22%20stroke%3D%22%23241708%22%20stroke-width%3D%223.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M21%2032%20L9%2021%20Q13%2032%209%2043%20Z%22%20fill%3D%22%239E2F1E%22%20stroke%3D%22%23241708%22%20stroke-width%3D%223.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2229%22%20r%3D%223.2%22%20fill%3D%22%23F3E6CB%22%2F%3E%3C%2Fsvg%3E">
+<meta property="og:title" content="The Help Desk Simulator">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700;800&family=Cutive+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pine:#E2CBA0; --birch:#F3E6CB; --ink:#241708; --bark:#4E3820;
+  --teal:#1C574F; --bobber:#9E2F1E; --mustard:#A66C11;
+  --display:"Caveat","Bradley Hand","Segoe Print","Ink Free","Comic Sans MS",cursive;
+  --body:"Nunito",system-ui,sans-serif;
+  --mono:"Cutive Mono",ui-monospace,monospace;
+  --wobble:255px 15px 225px 15px/15px 225px 15px 255px;
+  --wobble2:15px 225px 15px 255px/225px 15px 255px 15px;
+}
+*,*::before,*::after{box-sizing:border-box}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{
+  margin:0;font-family:var(--body);color:var(--ink);font-size:17px;line-height:1.6;
+  background-color:var(--pine);
+  background-image:repeating-linear-gradient(91deg,rgba(78,56,32,.06) 0 1px,transparent 1px 6px),
+                   repeating-linear-gradient(89deg,rgba(78,56,32,.04) 0 2px,transparent 2px 17px);
+  min-height:100vh;
+}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;font-weight:700}
+:focus-visible{outline:3px dashed var(--teal);outline-offset:3px}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+.wrap{max-width:840px;margin:0 auto;padding:1.25rem 1.1rem 3rem}
+
+.bar{
+  display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
+  background:var(--birch);border:3px solid var(--ink);border-radius:var(--wobble);
+  padding:.6rem 1rem;box-shadow:4px 4px 0 rgba(36,23,8,.45);margin-bottom:1.1rem;
+}
+.bar__title{font-family:var(--display);font-size:1.5rem;margin-right:auto}
+.pill{
+  font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;
+  border:2.5px solid var(--ink);border-radius:999px;padding:.15rem .7rem;background:var(--pine);
+}
+.pill b{font-family:var(--display);font-size:1.15rem;letter-spacing:0}
+.back{font-family:var(--display);font-size:1.15rem;color:var(--bark);text-decoration:none;border-bottom:2.5px solid var(--bobber)}
+
+.clock{position:relative;height:16px;background:#FBF4E4;border:3px solid var(--ink);border-radius:999px;overflow:hidden;margin-bottom:.35rem}
+.clock__fill{height:100%;width:100%;background:var(--teal);transition:width .95s linear,background .4s}
+.clock__label{font-family:var(--mono);font-size:.72rem;color:var(--bark);text-align:right;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.07em}
+
+.panel{
+  background:var(--birch);border:3px solid var(--ink);border-radius:var(--wobble2);
+  padding:1.4rem;box-shadow:5px 5px 0 rgba(36,23,8,.42);margin-bottom:1.1rem;
+}
+.round{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--bobber);margin-bottom:.2rem}
+.panel h2{font-size:2rem;margin-bottom:.5rem}
+.meta{font-family:var(--mono);font-size:.76rem;color:var(--bark);margin-bottom:.9rem;display:flex;gap:.9rem;flex-wrap:wrap}
+.body-text{margin:0 0 1rem}
+.quote{border-left:5px solid var(--mustard);padding:.2rem 0 .2rem .9rem;color:var(--bark);font-style:italic;margin-bottom:1rem}
+
+.choices{display:grid;gap:.65rem}
+.choice{
+  text-align:left;width:100%;background:var(--pine);color:var(--ink);
+  border:3px solid var(--ink);border-radius:var(--wobble);padding:.8rem 1rem;
+  box-shadow:3px 3px 0 var(--ink);transition:transform .12s,box-shadow .12s,background .12s;
+  font-weight:600;line-height:1.45;
+}
+.choice:hover:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink);background:#EBD8B2}
+.choice:disabled{cursor:default;opacity:.55}
+.choice.is-picked{opacity:1}
+.choice.is-right{background:#BFDAD2;box-shadow:3px 3px 0 var(--teal);border-color:var(--teal);opacity:1}
+.choice.is-wrong{background:#EEC4BC;box-shadow:3px 3px 0 var(--bobber);border-color:var(--bobber);opacity:1}
+.choice.is-answer{background:#BFDAD2;border-color:var(--teal);opacity:.9}
+
+.fb{border:3px dashed var(--ink);border-radius:var(--wobble);padding:1rem 1.2rem;margin-top:1.1rem;background:#FBF4E4}
+.fb__verdict{font-family:var(--display);font-size:1.8rem;line-height:1.05;margin-bottom:.35rem}
+.fb--good .fb__verdict{color:var(--teal)} .fb--bad .fb__verdict{color:var(--bobber)} .fb--ok .fb__verdict{color:var(--mustard)}
+.fb__why{margin-bottom:.7rem}
+.fb__rule{font-family:var(--mono);font-size:.78rem;background:var(--pine);border:2.5px solid var(--ink);border-radius:8px;padding:.5rem .7rem;display:block;line-height:1.5}
+
+.next{
+  margin-top:1rem;background:var(--bobber);color:var(--birch);border:3px solid var(--ink);
+  border-radius:var(--wobble);padding:.5rem 1.6rem;font-family:var(--display);font-size:1.5rem;
+  box-shadow:4px 4px 0 var(--ink);transition:transform .12s,box-shadow .12s;
+}
+.next:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+
+.center{text-align:center}
+.intro h1{font-size:clamp(2.6rem,9vw,4.2rem);margin-bottom:.3rem}
+.intro p{color:var(--bark);max-width:52ch;margin:0 auto 1rem}
+.rules{text-align:left;max-width:46ch;margin:0 auto 1.4rem;display:grid;gap:.55rem;padding:0;list-style:none}
+.rules li{position:relative;padding-left:1.6rem;font-size:.95rem;color:var(--bark)}
+.rules li::before{content:"✓";position:absolute;left:0;top:-.15em;font-family:var(--display);font-size:1.35rem;color:var(--teal)}
+.score-big{font-family:var(--display);font-size:5rem;line-height:1;color:var(--teal)}
+.score-big.low{color:var(--bobber)} .score-big.mid{color:var(--mustard)}
+.review{text-align:left;display:grid;gap:.6rem;margin-top:1.2rem}
+.review__item{border-left:5px solid var(--bobber);padding-left:.85rem;font-size:.92rem;color:var(--bark)}
+.review__item b{color:var(--ink)}
+@media (max-width:560px){
+  body{font-size:16px}
+  .bar{gap:.4rem;padding:.5rem .7rem}
+  .bar__title{font-size:1.2rem;width:100%}
+  .panel{padding:1.1rem}
+}
+
+.ripple{
+  position:fixed;z-index:300;pointer-events:none;
+  width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  border:2.5px solid var(--teal);
+  animation:splash .5s cubic-bezier(.2,.7,.4,1) forwards;
+}
+@keyframes splash{from{transform:scale(.4);opacity:.85}to{transform:scale(6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.ripple{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="bar">
+    <span class="bar__title">The Help Desk Simulator</span>
+    <span class="pill">Ticket <b id="ticketNum">0</b>/<b id="ticketTotal">0</b></span>
+    <span class="pill">Score <b id="score">0</b></span>
+    <a class="back" href="../../index.html#games">&larr; Portfolio</a>
+  </div>
+
+  <div id="clockWrap" hidden>
+    <div class="clock"><div class="clock__fill" id="clockFill"></div></div>
+    <div class="clock__label" id="clockLabel">SLA</div>
+  </div>
+
+  <main id="stage" aria-live="polite"></main>
+</div>
+
+<script>
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════
+   Two kinds of round, because a help desk needs two skills:
+     triage  — three tickets open at once, which first?
+     resolve — one ticket, four actions, which is right?
+   Every answer is explained, including correct ones.
+   ══════════════════════════════════════════════════════════════ */
+
+const ROUNDS = [
+  {
+    type: "triage",
+    prompt: "Three tickets land in the queue within a minute of each other. You can only work one at a time. Which do you pick up first?",
+    seconds: 40,
+    options: [
+      { text: "P3 \u2014 The VP of Sales can't print to the third-floor printer. Marked \"URGENT!!\" and she's copied your manager.",
+        score: 4,
+        why: "Seniority and exclamation marks aren't impact. One person who can't print has workarounds: another printer, a PDF, a colleague. Nobody's revenue stops." },
+      { text: "P1 \u2014 All eight registers on the retail floor are declining card payments. The store is open.",
+        score: 10, best: true,
+        why: "Eight registers down during trading hours means the business is actively losing money and customers are stuck at the till. Most users affected, no workaround, direct financial impact. This is first every time." },
+      { text: "P4 \u2014 A new hire starting Monday needs design software installed on their laptop.",
+        score: 2,
+        why: "This has a deadline, not an emergency. Monday is days away. Legitimate work, wrong moment." },
+    ],
+    rule: "Triage by impact, not volume. Count affected users, ask whether a workaround exists, and check whether money or safety is on the line. A calm ticket can outrank a shouting one."
+  },
+  {
+    type: "resolve",
+    from: "Inbound call \u2014 caller ID withheld",
+    subject: "Password reset, urgently",
+    priority: "P2",
+    seconds: 45,
+    quote: "\"Hi, it's Dana from Accounting. I'm locked out and I've got payroll to submit in fifteen minutes. Can you just reset it for me? I'm about to miss the deadline.\"",
+    body: "The caller sounds genuinely stressed and knows the name of your team lead. Payroll deadlines are real, and today is the last day of the month.",
+    options: [
+      { text: "Reset the password immediately and read the temporary one out. Payroll can't wait.",
+        score: 0,
+        why: "This is the exact scenario social engineers rehearse: a real deadline, a real name, and pressure to skip a step. The time pressure is the attack, not a reason to drop the check." },
+      { text: "Verify identity against the agreed method first \u2014 employee ID, callback to the number on file, or manager confirmation \u2014 then reset.",
+        score: 10, best: true,
+        why: "You still solve it fast, you just prove who you're talking to first. A callback to the recorded number takes thirty seconds and defeats almost every version of this call." },
+      { text: "Escalate to your team lead so they can make the call.",
+        score: 3,
+        why: "Not harmful, but this sits squarely within your authority once identity is confirmed. Escalating a routine reset clogs the queue and delays Dana further if she really is Dana." },
+      { text: "Tell her to email the help desk from her work address instead.",
+        score: 4,
+        why: "Reasonable instinct, since mail from the corporate account is itself weak verification. But she's locked out, so she may not be able to reach her mail. It stalls without resolving." },
+    ],
+    rule: "Verify identity before any account change. No exception for urgency, seniority, or a caller who knows internal names \u2014 those are ingredients of the attack, not evidence against it."
+  },
+  {
+    type: "resolve",
+    from: "m.okafor@company.com",
+    subject: "Can't reach the shared drive",
+    priority: "P3",
+    seconds: 45,
+    quote: "\"The S: drive isn't there this morning. It was fine yesterday. I need the quarterly folder.\"",
+    body: "Single user. No other tickets about the shared drive. She's working from home today.",
+    options: [
+      { text: "Escalate to the network team \u2014 sounds like a file server problem.",
+        score: 2,
+        why: "You'd be handing another team a ticket with no diagnostics attached. If the server were down you'd have twenty of these, not one." },
+      { text: "Ask whether she's connected to the VPN, confirm nobody else is affected, then try remapping the drive.",
+        score: 10, best: true,
+        why: "One user, working from home, mapped drive missing. VPN is the overwhelmingly likely cause and takes one question to rule in or out. Cheap checks first." },
+      { text: "Rebuild her Windows profile.",
+        score: 0,
+        why: "Wildly disproportionate. Profile rebuilds risk data and cost an afternoon, all to fix something that is probably a disconnected VPN." },
+      { text: "Reimage the laptop to get a clean state.",
+        score: 0,
+        why: "Nuclear. Reimaging destroys local data and configuration to solve a problem you haven't diagnosed at all." },
+    ],
+    rule: "Check the cheap, common causes before the expensive, rare ones. One affected user points at that user's setup; many affected users point at the system."
+  },
+  {
+    type: "resolve",
+    from: "t.reyes@company.com",
+    subject: "I think I clicked something bad",
+    priority: "P1",
+    seconds: 35,
+    quote: "\"I got an email about a shared invoice, clicked the link, and it asked me to sign in with my email password. I typed it in before I realised the page looked wrong. Sorry.\"",
+    body: "He reported it himself, about four minutes after it happened.",
+    options: [
+      { text: "Reassure him it's probably fine and tell him to delete the email.",
+        score: 0,
+        why: "His credentials are already gone. Deleting the mail destroys your evidence and changes nothing about the stolen password." },
+      { text: "Change his password immediately, invalidate active sessions, escalate to security, and check for new mailbox rules or unfamiliar sign-ins.",
+        score: 10, best: true,
+        why: "Correct order and correct scope. The password is burned so it gets rotated, live sessions are killed so an attacker can't ride one, and attackers routinely plant a forwarding rule to keep reading mail after the reset." },
+      { text: "Tell him to run a full antivirus scan and report back.",
+        score: 2,
+        why: "This wasn't malware \u2014 he typed a password into a web form. Antivirus finds nothing, and the delay is what costs you." },
+      { text: "Log it as P3 and pick it up after your current ticket.",
+        score: 0,
+        why: "Live credential compromise is a minutes-matter event. Downgrading it hands the attacker a free window." },
+    ],
+    rule: "Credential phishing means the password is already gone. Rotate it, kill live sessions, hunt for mailbox rules, escalate. And never make the reporter feel stupid \u2014 the person who tells you fast is the one who saved you."
+  },
+  {
+    type: "triage",
+    prompt: "Three more arrive while you're writing up the last one. Which first?",
+    seconds: 40,
+    options: [
+      { text: "One user reports their monitor flickers occasionally.",
+        score: 2,
+        why: "Annoying, not blocking. It waits." },
+      { text: "Nobody in the building can send or receive email. Roughly 200 people.",
+        score: 10, best: true,
+        why: "A company-wide outage of a core service. Every minute multiplies across 200 people, and this is almost certainly one root cause rather than 200 separate tickets." },
+      { text: "A contractor's badge won't open the supply closet.",
+        score: 3,
+        why: "Real, small, and has an obvious human workaround \u2014 somebody with a working badge opens the door." },
+    ],
+    rule: "One outage affecting everybody outranks a pile of individual annoyances. Fix the root cause and the tickets stop arriving."
+  },
+  {
+    type: "resolve",
+    from: "Facilities shared mailbox",
+    subject: "Printer says offline again",
+    priority: "P4",
+    seconds: 45,
+    quote: "\"The big printer by the kitchen has said offline since yesterday afternoon. We've already tried turning it off and on.\"",
+    body: "The printer is four years old. Another department reported the same model working fine this morning.",
+    options: [
+      { text: "Raise a purchase request for a replacement printer.",
+        score: 0,
+        why: "You haven't diagnosed anything. Spending money is not a first troubleshooting step." },
+      { text: "Check the physical connection and IP, clear the queue, and restart the print spooler.",
+        score: 10, best: true,
+        why: "\"Offline\" on a network printer is usually a stuck queue, a lost IP lease, or an unplugged cable. All three take minutes to check and cost nothing." },
+      { text: "Escalate to the printer vendor under the support contract.",
+        score: 3,
+        why: "Possibly where this ends up, but the vendor's first question will be which basics you already checked. Do those first or the ticket bounces straight back." },
+      { text: "Tell them to use the printer on the second floor.",
+        score: 1,
+        why: "A workaround is worth offering alongside a fix, never instead of one. Offer it while you diagnose." },
+    ],
+    rule: "Power, cable, queue, spooler, IP. Work up from the cheapest check. A workaround buys you time \u2014 it doesn't close the ticket."
+  },
+  {
+    type: "resolve",
+    from: "j.whitfield@company.com (Regional Manager)",
+    subject: "Access for my team member",
+    priority: "P3",
+    seconds: 45,
+    quote: "\"Please add Priya to the Finance Payroll folder today. I'll take responsibility for it, she's covering for someone. No need for the usual paperwork.\"",
+    body: "Priya is a real employee. Whitfield is a real manager. Payroll data is classified restricted, and the folder's approver is the Finance Director \u2014 not Whitfield.",
+    options: [
+      { text: "Grant the access. A manager took responsibility in writing.",
+        score: 0,
+        why: "He isn't the approver for this data. Authority over a person is not authority over a dataset, and \"I'll take responsibility\" doesn't transfer approval rights." },
+      { text: "Refuse and tell him the request is inappropriate.",
+        score: 2,
+        why: "You reach the right answer and damage the relationship getting there. Nothing here is malicious \u2014 he's trying to cover an absence." },
+      { text: "Explain the folder needs Finance Director approval, send him the access request form, and offer to fast-track it once approved.",
+        score: 10, best: true,
+        why: "Holds the control and helps him get what he needs. You've said no to the shortcut and yes to the goal, which is how you stay compliant and still easy to work with." },
+      { text: "Grant read-only access as a compromise.",
+        score: 1,
+        why: "Read access to payroll data is the sensitive part. Half-breaching a control is still breaching it." },
+    ],
+    rule: "Access controls exist so no single person can wave them through. Route the request to the actual approver, and be helpful about it \u2014 enforcing a rule and being obstructive are different things."
+  },
+  {
+    type: "resolve",
+    from: "System notification",
+    subject: "SLA warning \u2014 TCK-4471 breaches in 6 minutes",
+    priority: "P2",
+    seconds: 30,
+    quote: "You're forty minutes into a fiddly P3 that's nearly finished. A P2 you haven't touched breaches its SLA in six minutes.",
+    body: "The P3 is one user's mail signature formatting. The P2 is a finance team of six who can't open the reporting tool.",
+    options: [
+      { text: "Finish the P3 first \u2014 it's almost done and switching wastes the work.",
+        score: 1,
+        why: "Sunk cost. Forty minutes already spent on a signature doesn't make a signature more important than six blocked people." },
+      { text: "Switch to the P2 now, and post a short note on the P3 saying where you got to and when you'll return.",
+        score: 10, best: true,
+        why: "Right priority and right communication. The note means the P3 user isn't left guessing, and whoever picks it up doesn't start from scratch." },
+      { text: "Switch to the P2 and say nothing on the P3.",
+        score: 5,
+        why: "Priority correct, handover missing. An undocumented ticket is one somebody has to re-diagnose from the beginning." },
+      { text: "Let the P2 breach and log the reason afterwards.",
+        score: 0,
+        why: "A breach you chose is worse than one you couldn't prevent, and six blocked users have been waiting the whole time." },
+    ],
+    rule: "Priority beats progress. When you switch, leave a note \u2014 an SLA measures response, and a two-line update is a response."
+  },
+];
+
+let idx = 0, score = 0, maxScore = ROUNDS.length * 10, answered = false;
+let timer = null, remaining = 0, total = 0;
+const missed = [];
+
+const $ = (id) => document.getElementById(id);
+const stage = $("stage");
+const esc = (s) => String(s).replace(/[&<>"']/g, c => (
+  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+$("ticketTotal").textContent = ROUNDS.length;
+
+function startClock(seconds) {
+  stopClock();
+  total = remaining = seconds;
+  $("clockWrap").hidden = false;
+  paintClock();
+  timer = setInterval(() => {
+    remaining--;
+    paintClock();
+    if (remaining <= 0) { stopClock(); timeUp(); }
+  }, 1000);
+}
+function stopClock() { if (timer) { clearInterval(timer); timer = null; } }
+function paintClock() {
+  const pct = Math.max(0, (remaining / total) * 100);
+  const fill = $("clockFill");
+  fill.style.width = pct + "%";
+  fill.style.background = pct > 50 ? "var(--teal)" : pct > 20 ? "var(--mustard)" : "var(--bobber)";
+  $("clockLabel").textContent = "SLA \u2014 " + Math.max(0, remaining) + "s remaining";
+}
+
+function render() {
+  answered = false;
+  if (idx >= ROUNDS.length) return results();
+
+  const r = ROUNDS[idx];
+  $("ticketNum").textContent = idx + 1;
+
+  const head = r.type === "triage"
+    ? '<div class="round">Round ' + (idx + 1) + ' \u00b7 Triage</div>' +
+      '<h2>Which ticket first?</h2>' +
+      '<p class="body-text">' + esc(r.prompt) + '</p>'
+    : '<div class="round">Round ' + (idx + 1) + ' \u00b7 Resolve</div>' +
+      '<h2>' + esc(r.subject) + '</h2>' +
+      '<div class="meta"><span>From: ' + esc(r.from) + '</span><span>Priority: ' + esc(r.priority) + '</span></div>' +
+      (r.quote ? '<div class="quote">' + esc(r.quote) + '</div>' : '') +
+      '<p class="body-text">' + esc(r.body) + '</p>';
+
+  stage.innerHTML =
+    '<section class="panel">' + head +
+      '<div class="choices" id="choices" role="group" aria-label="Choose an action">' +
+        r.options.map((o, i) => '<button class="choice" data-i="' + i + '">' + esc(o.text) + '</button>').join('') +
+      '</div><div id="fb"></div></section>';
+
+  document.querySelectorAll(".choice").forEach(b =>
+    b.addEventListener("click", () => answer(Number(b.dataset.i))));
+
+  startClock(r.seconds);
+}
+
+function lockChoices(picked) {
+  const r = ROUNDS[idx];
+  document.querySelectorAll(".choice").forEach((b, i) => {
+    b.disabled = true;
+    if (i === picked) b.classList.add("is-picked", r.options[i].best ? "is-right" : "is-wrong");
+    else if (r.options[i].best) b.classList.add("is-answer");
+  });
+}
+
+function showFeedback(tone, verdict, why, rule) {
+  const last = idx + 1 === ROUNDS.length;
+  $("fb").innerHTML =
+    '<div class="fb fb--' + tone + '">' +
+      '<div class="fb__verdict">' + esc(verdict) + '</div>' +
+      '<p class="fb__why">' + esc(why) + '</p>' +
+      '<span class="fb__rule"><b>Rule of thumb:</b> ' + esc(rule) + '</span>' +
+      '<button class="next" id="next">' + (last ? "See your shift report" : "Next ticket") + '</button>' +
+    '</div>';
+  $("next").addEventListener("click", () => { idx++; render(); });
+  $("next").focus();
+}
+
+function answer(i) {
+  if (answered) return;
+  answered = true;
+  stopClock();
+
+  const r = ROUNDS[idx];
+  const opt = r.options[i];
+  score += opt.score;
+  $("score").textContent = score;
+  lockChoices(i);
+
+  const tone = opt.best ? "good" : opt.score >= 4 ? "ok" : "bad";
+  const verdict = (opt.best ? "That's the call." :
+                   opt.score >= 4 ? "Defensible, but not the best call." :
+                   "That one costs you.") + "  +" + opt.score;
+
+  if (!opt.best) {
+    missed.push({ round: idx + 1, title: r.type === "triage" ? "Triage round" : r.subject, rule: r.rule });
+  }
+  showFeedback(tone, verdict, opt.why, r.rule);
+}
+
+function timeUp() {
+  if (answered) return;
+  answered = true;
+  const r = ROUNDS[idx];
+  lockChoices(-1);
+  missed.push({ round: idx + 1, title: (r.subject || "Triage round") + " (SLA breached)", rule: r.rule });
+  showFeedback("bad", "SLA breached.  +0",
+    "The clock ran out before you acted. On a real desk that's a missed response target, and the user "
+    + "has been sitting there the whole time. Deciding quickly with the information you have beats deciding "
+    + "perfectly too late \u2014 and if you genuinely need longer, the move is to update the ticket so the clock "
+    + "reflects reality.", r.rule);
+}
+
+function results() {
+  stopClock();
+  $("clockWrap").hidden = true;
+
+  const pct = Math.round((score / maxScore) * 100);
+  const band = pct >= 85 ? "" : pct >= 60 ? "mid" : "low";
+  const line = pct >= 85 ? "You'd be trusted on the queue unsupervised."
+             : pct >= 60 ? "Solid instincts, a few habits to tighten."
+             : "Worth another shift. The rules below are the ones that cost you.";
+
+  stage.innerHTML =
+    '<section class="panel center">' +
+      '<div class="round">Shift report</div>' +
+      '<div class="score-big ' + band + '">' + pct + '%</div>' +
+      '<p style="color:var(--bark);margin:.2rem 0 .3rem"><b>' + score + '</b> of ' + maxScore + ' points</p>' +
+      '<h2 style="font-size:1.9rem;margin-bottom:.8rem">' + line + '</h2>' +
+      (missed.length
+        ? '<div class="review"><div class="round" style="text-align:left">Go back over these</div>' +
+          missed.map(m => '<div class="review__item"><b>Ticket ' + m.round + ' \u2014 ' + esc(m.title) +
+                          '</b><br>' + esc(m.rule) + '</div>').join('') + '</div>'
+        : '<p style="color:var(--teal);font-weight:700">Clean shift. Every call correct.</p>') +
+      '<button class="next" id="again" style="margin-top:1.4rem">Run the shift again</button>' +
+      '<p style="margin-top:1rem"><a class="back" href="../../index.html#games">\u2190 Back to portfolio</a></p>' +
+    '</section>';
+
+  $("again").addEventListener("click", () => {
+    idx = 0; score = 0; missed.length = 0;
+    $("score").textContent = "0";
+    render();
+  });
+}
+
+function intro() {
+  stage.innerHTML =
+    '<section class="panel center intro">' +
+      '<h1>Your first shift</h1>' +
+      '<p>Eight tickets, a clock on every one. Some ask which ticket you take first, the rest ask what ' +
+      'you would actually do. Every answer gets explained, including the ones you get right.</p>' +
+      '<ul class="rules">' +
+        '<li>Impact decides priority \u2014 not tone, not job title</li>' +
+        '<li>Verify who you are talking to before changing an account</li>' +
+        '<li>Check the cheap causes before escalating to another team</li>' +
+        '<li>If the clock runs out, you score nothing for that ticket</li>' +
+      '</ul>' +
+      '<button class="next" id="start">Clock in</button>' +
+    '</section>';
+  $("start").addEventListener("click", () => { idx = 0; score = 0; missed.length = 0; $("score").textContent = "0"; render(); });
+}
+
+intro();
+
+/* Click ripple, appended to body so it never fights the wobbly
+   borders. Decorative only, so reduced motion skips it. */
+(function ripple(){
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.addEventListener("pointerdown", function (e) {
+    if (!e.target.closest("button, .mlink, .attach, .back")) return;
+    var d = document.createElement("span");
+    d.className = "ripple";
+    d.style.left = e.clientX + "px";
+    d.style.top = e.clientY + "px";
+    document.body.appendChild(d);
+    d.addEventListener("animationend", function(){ d.remove(); }, { once: true });
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

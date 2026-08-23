@@ -1,0 +1,14 @@
+From: "Microsoft Office 365" <security@rnicrosoft-verify.com>
+Reply-To: recovery@mail-secure-portal.ru
+Return-Path: <bounce@sendgrid-relay.net>
+To: jaylen@company.com
+Subject: Action required: your account will be suspended
+Authentication-Results: mx.company.com; spf=fail smtp.mailfrom=rnicrosoft-verify.com; dkim=fail; dmarc=fail
+Content-Type: text/html
+
+<html><body>
+<p>We detected unusual activity. Your account will be closed within 24 hours
+unless you verify your identity immediately.</p>
+<p><a href="http://185.220.101.44/o365/login">https://login.microsoftonline.com/verify</a></p>
+<p>You will need to confirm your password and one-time code.</p>
+</body></html>

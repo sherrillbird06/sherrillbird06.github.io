@@ -1,0 +1,32 @@
+Mar  3 10:09:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 59 ssh2
+Mar  3 10:30:01 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+Mar  3 10:10:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 510 ssh2
+Mar  3 10:30:05 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+Mar  3 10:01:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 51 ssh2
+Mar  3 10:05:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 55 ssh2
+Mar  3 10:03:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 53 ssh2
+Mar  3 10:20:09 web sshd[1]: Accepted password for ada from 192.0.2.10 port 22 ssh2
+Mar  3 10:20:05 web sshd[1]: Failed password for ada from 192.0.2.10 port 22 ssh2
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+Mar  3 10:30:00 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+Mar  3 10:30:04 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+Mar  3 10:06:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 56 ssh2
+Mar  3 10:07:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 57 ssh2
+Mar  3 10:30:06 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+Mar  3 10:08:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 58 ssh2
+Mar  3 10:30:02 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+Mar  3 10:00:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 50 ssh2
+Mar  3 10:30:03 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+Mar  3 10:02:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 52 ssh2
+Mar  3 10:30:07 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+Mar  3 10:20:00 web sshd[1]: Failed password for ada from 192.0.2.10 port 22 ssh2
+Mar  3 10:30:08 web sshd[1]: Failed password for root from 192.168.1.50 port 22 ssh2
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+Mar  3 10:11:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 511 ssh2
+Mar  3 10:04:11 web sshd[1]: Failed password for invalid user admin from 203.0.113.45 port 54 ssh2
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404
+198.51.100.7 - - [03/Mar/2026] "GET /wp-login.php HTTP/1.1" 404

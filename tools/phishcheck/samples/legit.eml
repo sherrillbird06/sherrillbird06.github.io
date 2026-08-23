@@ -1,0 +1,10 @@
+From: "Nashville State IT" <helpdesk@nscc.edu>
+Reply-To: helpdesk@nscc.edu
+Return-Path: <helpdesk@nscc.edu>
+To: jaylen@nscc.edu
+Subject: Scheduled maintenance this Saturday
+Authentication-Results: mx.nscc.edu; spf=pass smtp.mailfrom=nscc.edu; dkim=pass; dmarc=pass
+Content-Type: text/plain
+
+The student portal will be offline Saturday 2am-6am for maintenance.
+No action is needed. Questions can go to the help desk during business hours.

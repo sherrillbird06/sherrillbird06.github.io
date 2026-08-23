@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache, must-revalidate">
+<meta name="build" content="2026-08-23-1928">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Tackle Box — training simulators & small tools</title>
+<meta name="description" content="Security tools and games, built and documented.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2213%22%20fill%3D%22%23E2CBA0%22%2F%3E%3Cpath%20d%3D%22M21%2032%20Q29%2018%2044%2022%20Q54%2026%2056%2032%20Q54%2038%2044%2042%20Q29%2046%2021%2032%20Z%22%20fill%3D%22%239E2F1E%22%20stroke%3D%22%23241708%22%20stroke-width%3D%223.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M21%2032%20L9%2021%20Q13%2032%209%2043%20Z%22%20fill%3D%22%239E2F1E%22%20stroke%3D%22%23241708%22%20stroke-width%3D%223.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2229%22%20r%3D%223.2%22%20fill%3D%22%23F3E6CB%22%2F%3E%3C%2Fsvg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="The Tackle Box">
+<meta property="og:description" content="Two training simulators and five small tools for spotting trouble early — help desk triage under an SLA clock, and an inbox where some of the mail is trying to get you.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Tackle Box">
+<meta name="twitter:description" content="Practice help desk triage and phishing detection. Built by Jaylen Sherrill.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700&family=Cutive+Mono&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Hand-painted bait shop.
+   Sanded pine, painted trim, wobbly ink lines, and a fish that
+   gets fatter the stronger your password is.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --pine:    #E2CBA0;   /* sanded board — the page itself */
+  --birch:   #F3E6CB;   /* lighter plank — panels and cards */
+  --walnut:  #241708;   /* ink */
+  --bark:    #4E3820;   /* faded pencil, second-tier text */
+  --teal:    #1C574F;   /* painted trim — means good */
+  --bobber:  #9E2F1E;   /* painted red — means trouble */
+  --mustard: #A66C11;   /* means middling */
+
+  --display: "Caveat", "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+  --body:    "Nunito", system-ui, sans-serif;
+  --utility: "Cutive Mono", ui-monospace, monospace;
+
+  --gut: clamp(1.25rem, 4vw, 4rem);
+  --max: 1140px;
+  /* the classic wobbly-box trick — no two corners alike */
+  --wobble:  255px 15px 225px 15px / 15px 225px 15px 255px;
+  --wobble2: 15px 225px 15px 255px / 225px 15px 255px 15px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+body {
+  margin: 0;
+  color: var(--walnut);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.65;
+  background-color: var(--pine);
+  /* wood grain: fine vertical streaks, barely there */
+  background-image:
+    repeating-linear-gradient(91deg, rgba(78,56,32,.055) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(89deg, rgba(78,56,32,.035) 0 2px, transparent 2px 17px),
+    repeating-linear-gradient(90deg, rgba(36,23,8,.025) 0 1px, transparent 1px 43px);
+}
+
+h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.02; margin: 0; }
+p { margin: 0; }
+a { color: inherit; }
+
+.skip { position: absolute; left: -9999px; top: 0; z-index: 100; background: var(--walnut); color: var(--birch); padding: .75rem 1rem; }
+.skip:focus { left: 0; }
+:focus-visible { outline: 3px dashed var(--teal); outline-offset: 3px; }
+
+/* ── Nav: a sign nailed across the top ─────────────────────────── */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: .8rem var(--gut);
+  background: var(--birch);
+  border-bottom: 3px solid var(--walnut);
+  box-shadow: 0 4px 0 rgba(36,23,8,.14);
+}
+.nav__id {
+  font-family: var(--display); font-size: 1.5rem; font-weight: 700;
+  text-decoration: none; letter-spacing: .01em;
+}
+.nav__links { display: flex; gap: clamp(.85rem, 2.5vw, 1.9rem); }
+.nav__links a {
+  font-size: .95rem; font-weight: 700; text-decoration: none; color: var(--bark);
+  padding-bottom: 1px; border-bottom: 2.5px solid transparent; transition: color .16s, border-color .16s;
+}
+.nav__links a:hover { color: var(--walnut); border-bottom-color: var(--bobber); }
+
+/* ── Hero ──────────────────────────────────────────────────────── */
+.hero {
+  max-width: var(--max); margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 5rem) var(--gut) clamp(2.5rem, 6vw, 4rem);
+  display: grid; grid-template-columns: 1.02fr .98fr;
+  gap: clamp(2rem, 5vw, 3.5rem); align-items: center;
+}
+.eyebrow {
+  font-family: var(--utility); font-size: .78rem; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--bark); margin-bottom: .5rem;
+}
+.hero__title {
+  font-size: clamp(3rem, 7.6vw, 5.4rem);
+  max-width: 14ch; margin-bottom: 1rem;
+  transform: rotate(-1.1deg); transform-origin: left center;
+}
+.hero__intro { color: var(--bark); max-width: 46ch; font-size: 1.02rem; }
+.hero__cta { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1.9rem; }
+
+/* Buttons: painted wooden tags with a real shadow you can press out */
+.btn {
+  display: inline-block; padding: .65rem 1.45rem;
+  font-family: var(--display); font-size: 1.35rem; font-weight: 700;
+  text-decoration: none; border: 2.5px solid var(--walnut);
+  border-radius: var(--wobble);
+  box-shadow: 3px 3px 0 var(--walnut);
+  transition: transform .12s, box-shadow .12s;
+}
+.btn--solid { background: var(--bobber); color: var(--birch); }
+.btn--ghost { background: var(--birch); color: var(--walnut); }
+.btn:hover  { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--walnut); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--walnut); }
+
+/* ── The fish meter: signature element ─────────────────────────── */
+.meter {
+  background: var(--birch);
+  border: 3px solid var(--walnut);
+  border-radius: var(--wobble2);
+  padding: 1.4rem 1.5rem 1.5rem;
+  box-shadow: 5px 5px 0 rgba(36,23,8,.5);
+  transform: rotate(.8deg);
+}
+.meter__head {
+  display: flex; align-items: center; gap: .5rem;
+  font-family: var(--utility); font-size: .76rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--bark);
+  padding-bottom: .8rem; margin-bottom: 1rem;
+  border-bottom: 2.5px dashed var(--bark);
+}
+.meter__dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--teal); border: 2px solid var(--walnut);
+  animation: bob 2.6s ease-in-out infinite;
+}
+@keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
+
+/* the tank the fish swims in */
+.tank {
+  position: relative; height: 132px; margin-bottom: .9rem;
+  border: 2.5px solid var(--walnut); border-radius: var(--wobble);
+  background: #CFE3DC;
+  overflow: hidden;
+}
+.tank svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tank__fish { transition: transform .45s cubic-bezier(.34,1.4,.5,1); transform-origin: 150px 62px; }
+@media (prefers-reduced-motion: no-preference) {
+  .tank__fish { animation: swim 4.5s ease-in-out infinite; }
+}
+@keyframes swim {
+  0%,100% { translate: 0 0 }
+  50%     { translate: 8px -5px }
+}
+.tank__caption {
+  position: absolute; left: 10px; bottom: 6px;
+  font-family: var(--display); font-size: 1.15rem; color: var(--walnut);
+}
+
+.meter__label { display: block; font-size: .88rem; color: var(--bark); margin-bottom: .4rem; font-weight: 600; }
+.meter__input {
+  width: 100%; padding: .75rem .9rem;
+  font-family: var(--utility); font-size: .95rem; color: var(--walnut);
+  background: #FBF4E4; border: 2.5px solid var(--walnut);
+  border-radius: var(--wobble);
+}
+.meter__input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--teal); }
+.meter__input::placeholder { color: #A08A6A; }
+
+.meter__readout { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 1rem 0 .5rem; }
+.meter__bits { font-family: var(--display); display: flex; align-items: baseline; gap: .4rem; }
+.meter__bits strong { font-size: 3rem; font-variant-numeric: tabular-nums; }
+.meter__bits span { font-family: var(--utility); font-size: .7rem; color: var(--bark); letter-spacing: .1em; text-transform: uppercase; }
+.meter__verdict {
+  font-family: var(--display); font-size: 1.3rem; font-weight: 700;
+  padding: .1rem .8rem; border: 2.5px solid var(--walnut);
+  border-radius: var(--wobble2); white-space: nowrap; background: var(--pine);
+}
+.meter__verdict[data-level="none"] { color: var(--bark) }
+.meter__verdict[data-level="weak"] { color: var(--birch); background: var(--bobber) }
+.meter__verdict[data-level="fair"] { color: var(--walnut); background: var(--mustard) }
+.meter__verdict[data-level="good"] { color: var(--birch); background: var(--teal) }
+
+/* measuring tape rather than a progress bar */
+.meter__track {
+  height: 14px; background: #FBF4E4; border: 2.5px solid var(--walnut);
+  border-radius: 999px; overflow: hidden;
+  background-image: repeating-linear-gradient(90deg, rgba(36,23,8,.35) 0 1.5px, transparent 1.5px 12px);
+}
+.meter__fill { height: 100%; width: 0%; background: var(--bark); transition: width .4s cubic-bezier(.34,1.3,.5,1), background .3s; }
+
+.meter__facts {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem;
+  margin: 1.1rem 0 0; padding-top: .95rem; border-top: 2.5px dashed var(--bark);
+}
+.meter__facts dt { font-family: var(--utility); font-size: .64rem; letter-spacing: .07em; text-transform: uppercase; color: var(--bark); margin-bottom: .1rem; }
+.meter__facts dd { margin: 0; font-family: var(--display); font-size: 1.3rem; overflow-wrap: break-word; }
+.meter__note { font-size: .74rem; color: var(--bark); margin-top: .9rem; font-family: var(--utility); }
+
+/* ── Bands ─────────────────────────────────────────────────────── */
+.band { max-width: var(--max); margin: 0 auto; padding: clamp(2.5rem, 6vw, 4.5rem) var(--gut); }
+.band--alt { background: rgba(243,230,203,.55); max-width: none; border-block: 3px solid var(--walnut); }
+.band--alt > * { max-width: var(--max); margin-inline: auto; }
+.band--end { text-align: center; }
+
+.band__head { margin-bottom: 2.2rem; max-width: 54ch; }
+.band__head h2 { font-size: clamp(2.4rem, 5.2vw, 3.4rem); margin-bottom: .3rem; transform: rotate(-.7deg); transform-origin: left; }
+.band__head p { color: var(--bark); }
+
+.state { font-family: var(--utility); font-size: .88rem; color: var(--bark); grid-column: 1 / -1; }
+.state--error { color: var(--bobber); line-height: 1.8; }
+.state--error code { background: var(--birch); border: 2px solid var(--walnut); padding: .1rem .4rem; border-radius: 5px; color: var(--walnut); }
+
+/* ── Cards: planks nailed to the wall ──────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.6rem; }
+.grid--games { grid-template-columns: repeat(2, 1fr); }
+
+.card {
+  position: relative;
+  background: var(--birch);
+  border: 3px solid var(--walnut);
+  border-radius: var(--wobble);
+  padding: 2.1rem 1.5rem 1.5rem;
+  display: flex; flex-direction: column;
+  box-shadow: 5px 5px 0 rgba(36,23,8,.42);
+  transition: transform .2s, box-shadow .2s;
+}
+.card:nth-child(odd)  { transform: rotate(-.5deg); }
+.card:nth-child(even) { transform: rotate(.45deg); }
+.card:nth-child(3n)   { border-radius: var(--wobble2); }
+.card:hover { transform: rotate(0deg) translate(-2px,-3px); box-shadow: 8px 9px 0 rgba(36,23,8,.42); }
+
+/* two nails holding the plank up */
+.card::before, .card::after {
+  content: ""; position: absolute; top: 11px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--bark); box-shadow: inset 1px 1px 0 rgba(0,0,0,.35);
+}
+.card::before { left: 15px; } .card::after { right: 15px; }
+
+.card__fish { display: block; margin-bottom: .5rem; }
+.card__kicker { font-family: var(--utility); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--bobber); margin-bottom: .3rem; }
+.card__name { font-size: 2.1rem; margin-bottom: .4rem; }
+.card__summary { color: var(--bark); font-size: .95rem; margin-bottom: 1rem; }
+
+.card__primitive {
+  font-family: var(--utility); font-size: .74rem; color: var(--walnut);
+  background: var(--pine); border: 2.5px solid var(--walnut);
+  border-radius: var(--wobble2); padding: .45rem .7rem; margin-bottom: 1rem;
+  overflow-wrap: break-word;
+}
+.card__list { list-style: none; margin: 0 0 1.1rem; padding: 0; display: grid; gap: .5rem; }
+.card__list li { position: relative; padding-left: 1.5rem; font-size: .9rem; color: var(--bark); }
+/* a little hook-check in front of each point */
+.card__list li::before {
+  content: "✓"; position: absolute; left: 0; top: -.05em;
+  font-family: var(--display); font-size: 1.25rem; color: var(--teal); font-weight: 700;
+}
+.card__auto { font-size: .87rem; color: var(--bark); border-left: 4px solid var(--mustard); padding-left: .85rem; margin-bottom: 1.1rem; }
+.card__auto b { color: var(--walnut); }
+
+.tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1.1rem; }
+.tag {
+  font-family: var(--utility); font-size: .7rem; color: var(--walnut);
+  border: 2px solid var(--walnut); border-radius: 999px;
+  padding: .12rem .65rem; background: var(--pine);
+}
+
+.card__foot { margin-top: auto; display: flex; gap: 1.1rem; flex-wrap: wrap; align-items: center; }
+.link {
+  font-family: var(--display); font-size: 1.3rem; font-weight: 700;
+  text-decoration: none; border-bottom: 3px solid var(--bobber); line-height: 1.1;
+}
+.link:hover { color: var(--bobber); }
+
+/* ── About ─────────────────────────────────────────────────────── */
+.about { display: grid; grid-template-columns: 1.4fr 1fr; gap: clamp(2rem, 5vw, 3.5rem); }
+.about h2 { font-size: clamp(2.4rem, 5.2vw, 3.4rem); margin-bottom: 1rem; transform: rotate(-.7deg); transform-origin: left; }
+.sub { font-family: var(--utility); font-size: .82rem; text-transform: uppercase; letter-spacing: .12em; font-weight: 400; color: var(--bark); margin-bottom: 1rem; }
+.about__bio .sub { margin-top: 2.2rem; }
+#bio p { color: var(--bark); margin-bottom: 1rem; max-width: 62ch; }
+
+.skills { display: grid; gap: 1rem; }
+.skills__group { display: grid; grid-template-columns: 9rem 1fr; gap: 1rem; align-items: start; }
+.skills__name { font-family: var(--display); font-size: 1.35rem; color: var(--walnut); line-height: 1.1; padding-top: .1rem; }
+
+/* education as a fishing line with bobbers on it */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.6rem; }
+.timeline li { position: relative; padding-left: 1.7rem; border-left: 3px dashed var(--bark); }
+.timeline li::before {
+  content: ""; position: absolute; left: -9px; top: .45em;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--bobber); border: 2.5px solid var(--walnut);
+}
+.timeline__period { font-family: var(--utility); font-size: .72rem; letter-spacing: .07em; color: var(--bark); text-transform: uppercase; }
+.timeline__cred { font-family: var(--display); font-size: 1.6rem; line-height: 1.1; margin: .1rem 0; }
+.timeline__inst { font-size: .9rem; color: var(--bark); font-weight: 600; }
+.timeline__detail { font-size: .87rem; color: var(--bark); margin-top: .3rem; }
+
+/* ── Contact & footer ──────────────────────────────────────────── */
+.band--end h2 { font-size: clamp(2.4rem, 5.2vw, 3.4rem); margin-bottom: .4rem; }
+.contact__line { color: var(--bark); margin-bottom: 1.6rem; }
+.contact__links { display: flex; gap: .8rem; justify-content: center; flex-wrap: wrap; }
+
+.foot {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
+  padding: 1.3rem var(--gut);
+  border-top: 3px solid var(--walnut); background: var(--birch);
+  font-family: var(--utility); font-size: .76rem; color: var(--bark);
+}
+
+/* ── Reveal ────────────────────────────────────────────────────── */
+.reveal { opacity: 0; translate: 0 16px; transition: opacity .5s ease, translate .5s ease; }
+.reveal.is-in { opacity: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; translate: 0 0; } }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
+  .grid, .grid--games { grid-template-columns: 1fr; }
+  .about { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .meter { transform: none; }
+  .meter__facts { grid-template-columns: 1fr; gap: .5rem; }
+  .skills__group { grid-template-columns: 1fr; gap: .2rem; }
+  .card:nth-child(odd), .card:nth-child(even) { transform: none; }
+  .nav { padding-inline: 1rem; }
+  .nav__id { font-size: 1.25rem; white-space: nowrap; }
+  .nav__links { gap: .8rem; }
+  .nav__links a { font-size: .85rem; }
+  .nav__links a:nth-child(3) { display: none; }
+  /* caption sits under the fish rather than across it */
+  .tank { height: 148px; }
+  .tank__caption { bottom: 3px; font-size: 1rem; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Boat intro + the water it cuts to
+   ═══════════════════════════════════════════════════════════════ */
+.dock{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:center;
+  background:linear-gradient(#BFD9E0 0%, #D8E4E0 46%, #CFE3DC 62%);
+  transition:opacity .85s ease, visibility .85s;
+  overflow:hidden;
+}
+.dock[hidden]{display:none}
+.dock.is-away{opacity:0;visibility:hidden;pointer-events:none}
+
+.dock__inner{position:relative;z-index:3;text-align:center;padding:1.5rem;transition:opacity .5s ease}
+.dock.is-sailing .dock__inner{opacity:0}
+.dock__title{
+  font-family:var(--display);font-size:clamp(3rem,11vw,6rem);line-height:.95;
+  color:var(--walnut);transform:rotate(-1.6deg);margin:0 0 .1rem;
+}
+.dock__sub{font-family:var(--utility);font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--bark);margin-bottom:1.4rem}
+.dock__boat{width:min(340px,74vw);height:auto;display:block;margin:0 auto 1rem}
+@media (prefers-reduced-motion:no-preference){
+  .dock__boat{animation:rock 3.4s ease-in-out infinite;transform-origin:50% 85%}
+}
+@keyframes rock{0%,100%{transform:rotate(-2.2deg) translateY(0)}50%{transform:rotate(2.2deg) translateY(-6px)}}
+.dock.is-sailing .dock__boat{animation:none;transition:transform 1s cubic-bezier(.5,0,.9,.6);transform:translateX(130vw) rotate(3deg)}
+
+/* the sea, used on the intro and again at the foot of the page */
+.sea{position:absolute;left:0;right:0;bottom:0;height:38%;background:#2F7E77;z-index:1}
+.sea__waves{position:absolute;top:-26px;left:0;width:200%;height:34px}
+@media (prefers-reduced-motion:no-preference){
+  .sea__waves{animation:drift 9s linear infinite}
+  .sea__waves--slow{animation-duration:15s;opacity:.55}
+}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.dock__go{
+  position:relative;z-index:3;background:var(--bobber);color:var(--birch);
+  border:3px solid var(--walnut);border-radius:var(--wobble);
+  padding:.5rem 2rem;font-family:var(--display);font-size:1.7rem;cursor:pointer;
+  box-shadow:5px 5px 0 var(--walnut);transition:transform .12s,box-shadow .12s;
+}
+.dock__go:hover{transform:translate(2px,2px);box-shadow:3px 3px 0 var(--walnut)}
+.dock__skip{
+  position:absolute;bottom:1rem;right:1.2rem;z-index:4;background:none;border:0;cursor:pointer;
+  font-family:var(--utility);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;
+  color:#F3E6CB;text-decoration:underline;
+}
+
+/* page arrives already at sea */
+.deck{position:relative;z-index:1}
+.waterline{position:relative;height:150px;margin-top:2.5rem;background:#2F7E77;overflow:hidden}
+.waterline__waves{position:absolute;top:-24px;left:0;width:200%;height:32px}
+@media (prefers-reduced-motion:no-preference){.waterline__waves{animation:drift 11s linear infinite}}
+.waterline__boat{position:absolute;bottom:26px;left:6%;width:150px;height:auto;z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .waterline__boat{animation:rock 4.2s ease-in-out infinite;transform-origin:50% 90%}
+}
+.foot{position:relative;z-index:2;background:#24625C;color:#DCE9E5;border-top:3px solid var(--walnut)}
+@media (max-width:560px){
+  .waterline{height:110px}
+  .waterline__boat{width:104px;bottom:18px}
+}
+
+/* ── Click ripple: a splash where you tapped ───────────────────── */
+.ripple{
+  position:fixed;z-index:300;pointer-events:none;
+  width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  border:2.5px solid var(--teal);
+  animation:splash .5s cubic-bezier(.2,.7,.4,1) forwards;
+}
+@keyframes splash{
+  from{transform:scale(.4);opacity:.85}
+  to  {transform:scale(6);opacity:0}
+}
+@media (prefers-reduced-motion:reduce){.ripple{display:none}}
+
+/* ── "why this helps a beginner" note on each tool card ────────── */
+.card__why{
+  font-size:.88rem;color:var(--bark);line-height:1.55;
+  background:var(--pine);border:2.5px dashed var(--bark);
+  border-radius:var(--wobble2);padding:.75rem .9rem;margin-bottom:1.1rem;
+}
+.card__why b{
+  display:block;font-family:var(--display);font-size:1.2rem;
+  color:var(--walnut);line-height:1.1;margin-bottom:.2rem;
+}
+
+</style>
+</head>
+<body data-build="2026-08-23-1928">
+
+<!-- ══════════════════════════════════════════════════════════════
+     EDIT YOUR CONTENT HERE
+
+     Everything on the page comes from the three JSON blocks below.
+     Change the text between the quotes and save. That's it.
+
+       data-profile   your name, bio, education, skills, contact
+       data-projects  the five automation tools
+       data-games     the Help Desk Simulator and Phishing Inbox
+
+     Two rules that will save you a headache:
+       1. Keep the quotes and commas exactly where they are.
+       2. Every item needs a comma after it EXCEPT the last one.
+
+     If the page goes blank after an edit, you dropped or added a
+     comma somewhere. Undo the last change and try again.
+     ══════════════════════════════════════════════════════════════ -->
+
+<script type="application/json" id="data-profile">
+{
+  "name": "The Tackle Box",
+  "role": "Help desk training & security practice",
+  "tagline": "Learn to spot the attack before you click it.",
+  "intro": "Two training simulators and five small tools, all built around the same idea: you don't learn to catch a phish by being told about it. You learn by getting caught once, somewhere safe. Try the tank on the right — it runs the same entropy math as the password tool below.",
+  "byline": "Jaylen Sherrill",
+  "bylineNote": "Nashville, TN · open to help desk and IT support roles",
+  "contact": {
+    "email": "jaylenbaylen@icloud.com",
+    "github": "https://github.com/sherrillbird06",
+    "linkedin": "https://www.linkedin.com/in/jaylen-sherrill-b91636327",
+    "resume": "resume.pdf"
+  }
+}
+</script>
+<script type="application/json" id="data-projects">
+[
+  {
+    "id": "phishcheck",
+    "name": "Phish Check",
+    "kicker": "Email header analyzer",
+    "summary": "Reads a suspicious email and reports what's wrong with it — mismatched reply-to, lookalike domains, failed SPF, links whose text doesn't match their destination. The scoring came straight out of building the phishing module, turned into something that checks a real message.",
+    "primitive": "Header parsing · homograph detection · SPF/DKIM/DMARC results",
+    "stack": [
+      "Python",
+      "CLI"
+    ],
+    "highlights": [
+      "Flags display names that don't match the actual sending address",
+      "Catches lookalike domains, including digit and Unicode substitutions",
+      "Reports SPF, DKIM, and DMARC results already in the headers",
+      "Explains every finding, so it teaches rather than just scores"
+    ],
+    "repo": "tools/phishcheck",
+    "automated": "Point it at a shared abuse mailbox and it triages new reports on a schedule.",
+    "beginner": "Phishing is the way most breaches actually start, and spotting one is a skill every help desk role asks about. Pulling apart real headers teaches you what SPF, DKIM, and DMARC are for far better than reading the definitions does."
+  },
+  {
+    "id": "lockout-lens",
+    "name": "Lockout Lens",
+    "kicker": "Failed login analyzer",
+    "summary": "Account lockouts are the ticket a help desk gets most, and the log is usually the fastest way to tell a forgotten password from a stale credential on an old device from an actual attack. This reads the failures and tells you which one you're looking at.",
+    "primitive": "Sliding-window analysis · source correlation",
+    "stack": [
+      "Python",
+      "CLI"
+    ],
+    "highlights": [
+      "Separates one person fumbling a password from many attempts across accounts",
+      "Groups failures by source so a forgotten phone login shows up as one device",
+      "Allowlist for internal ranges, so normal activity doesn't read as an attack",
+      "Writes a summary a tech can act on, not a wall of raw log lines"
+    ],
+    "repo": "tools/lockout-lens",
+    "automated": "Runs on a timer and posts a daily summary of overnight lockouts.",
+    "beginner": "Account lockouts are the single most common help desk ticket you'll ever touch. Learning to read a log and tell a forgotten password from a stale phone from an actual attack is the difference between closing a ticket and understanding it."
+  },
+  {
+    "id": "passforge",
+    "name": "PassForge",
+    "kicker": "Password reset helper",
+    "summary": "Generates temporary passwords for account resets and scores them by real entropy instead of a colored bar that turns green when you add an exclamation mark. Skips characters people misread over the phone, because a temp password read wrong is a second ticket.",
+    "primitive": "secrets.SystemRandom · Shannon entropy",
+    "stack": [
+      "Python",
+      "CLI"
+    ],
+    "highlights": [
+      "Leaves out I, l, 1, O, and 0 — the characters that get misheard on a reset call",
+      "Scores entropy in bits against the real character pool, not a rule checklist",
+      "Scores passphrases as word choices rather than characters, which is the honest number",
+      "Checks results against a local breach list before calling anything strong"
+    ],
+    "repo": "tools/passforge",
+    "automated": "Batch mode generates and logs temp credentials for a group of resets at once.",
+    "beginner": "Every support role resets passwords. Knowing why length beats symbols, and why a random-looking password can still be weak, means you can explain the policy to a frustrated user instead of just enforcing it."
+  },
+  {
+    "id": "lockbox",
+    "name": "Lockbox",
+    "kicker": "Encrypted file handoff",
+    "summary": "Encrypts a file before it leaves the machine, for the times a user needs to send something sensitive and email is the only channel they have. If a single byte changes in transit, it refuses to open rather than handing back convincing garbage.",
+    "primitive": "AES-256-GCM · scrypt key derivation",
+    "stack": [
+      "Python",
+      "CLI"
+    ],
+    "highlights": [
+      "Authenticated encryption, so tampering is detected instead of silently accepted",
+      "Passphrase stretched with scrypt and a random salt unique to each file",
+      "Handles large files in chunks instead of loading them into memory",
+      "Never writes the passphrase to disk or shell history"
+    ],
+    "repo": "tools/lockbox",
+    "automated": "Watches a folder and encrypts anything dropped into it.",
+    "beginner": "Sooner or later someone asks you to send them something sensitive. Understanding what encryption actually protects against — and what it doesn't — keeps you from being the reason data walks out the door."
+  },
+  {
+    "id": "sentinel-auth",
+    "name": "Sentinel Auth",
+    "kicker": "Login and MFA demo",
+    "summary": "A working login flow built to understand what's actually happening behind the MFA prompts and lockout policies I deal with on tickets. Password hashing, an authenticator-app second factor, and a lockout that escalates on repeat failures.",
+    "primitive": "Argon2id · TOTP (RFC 6238)",
+    "stack": [
+      "Python",
+      "Flask",
+      "SQLite"
+    ],
+    "highlights": [
+      "Passwords are hashed with Argon2id, never stored in a form anyone can read",
+      "Second factor works with any standard authenticator app",
+      "Lockout counts failures per account and per source, with a widening delay",
+      "Wrong username and wrong password return the same error, so neither confirms an account exists"
+    ],
+    "repo": "tools/sentinel-auth",
+    "automated": "Writes structured login events that Lockout Lens reads.",
+    "beginner": "You'll support MFA prompts and lockout policies on day one. Building a small version of one is the fastest way to understand what's happening behind the screen a user is complaining about."
+  }
+]
+</script>
+<script type="application/json" id="data-games">
+[
+  {
+    "id": "help-desk-simulator",
+    "name": "The Help Desk Simulator",
+    "summary": "A live help desk shift. Tickets arrive with running SLA timers and every decision is scored and explained — verify identity before you touch an account, check the simple causes before you escalate. Six modules in total, covering triage, phishing, audit trails, infrastructure basics, and a 28-term vocabulary trainer.",
+    "stack": [
+      "Training suite",
+      "6 modules",
+      "Browser-based"
+    ],
+    "play": "games/help-desk-simulator/index.html",
+    "repo": ""
+  },
+  {
+    "id": "phishing-game",
+    "name": "Phishing Inbox",
+    "summary": "An inbox where some of the mail is trying to get you. You sort real from fake and find out immediately what gave each one away — the display name, the reply-to, the urgency, the link that doesn't go where it says. Built because you can't lecture someone into recognizing social engineering; they have to get caught once somewhere safe.",
+    "stack": [
+      "Security awareness",
+      "Browser-based"
+    ],
+    "play": "games/phishing-inbox/index.html",
+    "repo": ""
+  }
+]
+</script>
+
+
+
+<!-- ── Intro: a boat on the water, then it sails and the page appears ── -->
+<div class="dock" id="dock">
+  <div class="sea" aria-hidden="true">
+    <svg class="sea__waves sea__waves--slow" width="240" height="32" viewBox="0 0 240 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M0 22 Q15 6 30 22 T60 22 T90 22 T120 22 T150 22 T180 22 T210 22 T240 22 V32 H0 Z" fill="#3E938B"/></svg>
+    <svg class="sea__waves" width="240" height="32" viewBox="0 0 240 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M0 22 Q15 6 30 22 T60 22 T90 22 T120 22 T150 22 T180 22 T210 22 T240 22 V32 H0 Z" fill="#2F7E77"/></svg>
+  </div>
+  <div class="dock__inner">
+    <svg class="dock__boat" width="240" height="170" viewBox="0 0 240 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M120 22 L120 116" stroke="#241708" stroke-width="6" stroke-linecap="round"/>
+      <path d="M126 30 Q182 66 128 104 Z" fill="#F3E6CB" stroke="#241708" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M114 34 Q78 68 112 100 Z" fill="#E2CBA0" stroke="#241708" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M120 20 L150 27 L120 34 Z" fill="#9E2F1E" stroke="#241708" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M44 116 Q120 106 196 116 Q186 152 120 154 Q54 152 44 116 Z"
+            fill="#A66C11" stroke="#241708" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M56 126 Q120 118 184 126" stroke="#241708" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+      <circle cx="94" cy="136" r="6" fill="#F3E6CB" stroke="#241708" stroke-width="3.5"/>
+      <circle cx="120" cy="138" r="6" fill="#F3E6CB" stroke="#241708" stroke-width="3.5"/>
+      <circle cx="146" cy="136" r="6" fill="#F3E6CB" stroke="#241708" stroke-width="3.5"/>
+    </svg>
+    <p class="dock__title">The Tackle Box</p>
+    <p class="dock__sub">Training simulators &amp; small tools</p>
+    <button class="dock__go" id="setSail">Set sail</button>
+  </div>
+  <button class="dock__skip" id="skipSail">Skip intro</button>
+</div>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <a class="nav__id" href="#top"><span data-bind="name">—</span></a>
+  <nav class="nav__links" aria-label="Sections">
+    <a href="#games">Training</a>
+    <a href="#work">Tools</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<main id="main" class="deck">
+
+  <!-- ── Hero: the live entropy demo is the thesis ───────────────── -->
+  <section class="hero" id="top">
+    <div class="hero__copy">
+      <p class="eyebrow" data-bind="role">—</p>
+      <h1 class="hero__title" data-bind="tagline">—</h1>
+      <p class="hero__intro" data-bind="intro">—</p>
+      <div class="hero__cta">
+        <a class="btn btn--solid" href="#games">See the simulators</a>
+        <a class="btn btn--ghost" href="#work">See the tools</a>
+      </div>
+    </div>
+
+    <div class="meter" role="group" aria-labelledby="meter-label">
+      <div class="meter__head">
+        <span class="meter__dot" aria-hidden="true"></span>
+        <span id="meter-label">How big is your fish?</span>
+      </div>
+      <div class="tank" aria-hidden="true">
+        <svg width="300" height="132" viewBox="0 0 300 132" xmlns="http://www.w3.org/2000/svg">
+          <!-- pondweed, drawn badly on purpose -->
+          <path d="M18 132 Q10 104 22 86 Q30 72 20 56" fill="none" stroke="#256A62" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+          <path d="M38 132 Q46 110 34 94" fill="none" stroke="#256A62" stroke-width="4" stroke-linecap="round" opacity=".4"/>
+          <path d="M280 132 Q288 106 274 90" fill="none" stroke="#256A62" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+          <circle cx="262" cy="34" r="4" fill="none" stroke="#256A62" stroke-width="2.5" opacity=".5"/>
+          <circle cx="248" cy="18" r="2.5" fill="none" stroke="#256A62" stroke-width="2.5" opacity=".4"/>
+          <g id="tank-fish" class="tank__fish"></g>
+        </svg>
+        <span class="tank__caption" id="tank-caption">nothing on the line yet</span>
+      </div>
+
+      <label class="meter__label" for="pw">Type a password — nothing leaves this page</label>
+      <input id="pw" class="meter__input" type="text" spellcheck="false"
+             autocomplete="off" placeholder="try: correct horse battery staple">
+      <div class="meter__readout">
+        <div class="meter__bits"><strong id="bits">0.0</strong><span>bits</span></div>
+        <div class="meter__verdict" id="verdict" data-level="none">Waiting for input</div>
+      </div>
+      <div class="meter__track"><div class="meter__fill" id="fill"></div></div>
+      <dl class="meter__facts">
+        <div><dt>Character pool</dt><dd id="pool">0</dd></div>
+        <div><dt>Length</dt><dd id="len">0</dd></div>
+        <div><dt>Offline crack time</dt><dd id="crack">—</dd></div>
+      </dl>
+      <p class="meter__note">Bigger fish = harder to crack. Same formula as PassForge: log₂(pool<sup>length</sup>), against 10¹¹ guesses/sec.</p>
+    </div>
+  </section>
+
+  <!-- ── Games ───────────────────────────────────────────────────── -->
+  <section class="band" id="games">
+    <div class="band__head">
+      <h2>Training simulators</h2>
+      <p>Practice environments for the decisions a help desk makes under a running clock.</p>
+    </div>
+    <div class="grid grid--games" id="games-grid" data-loading>
+      <p class="state">Loading games…</p>
+    </div>
+  </section>
+
+  <!-- ── Work ────────────────────────────────────────────────────── -->
+  <section class="band band--alt" id="work">
+    <div class="band__head">
+      <h2>Automation tools</h2>
+      <p>Small scripts I'm writing as I learn, each one aimed at a problem I've watched a help desk deal with. Every card names what it actually relies on.</p>
+    </div>
+    <div class="grid" id="projects" data-loading>
+      <p class="state">Loading projects…</p>
+    </div>
+  </section>
+
+
+
+  <!-- ── Who built it ─────────────────────────────────────────── -->
+  <section class="band band--end" id="contact">
+    <h2>Built by <span data-bind="byline">—</span></h2>
+    <p class="contact__line" data-bind="bylineNote">—</p>
+    <div class="contact__links" id="contact-links"></div>
+  </section>
+
+</main>
+
+
+<div class="waterline" aria-hidden="true">
+  <svg class="waterline__waves" width="240" height="32" viewBox="0 0 240 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M0 22 Q15 6 30 22 T60 22 T90 22 T120 22 T150 22 T180 22 T210 22 T240 22 V32 H0 Z" fill="#3E938B"/></svg>
+  <svg class="waterline__boat" width="150" height="106" viewBox="0 0 240 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M120 22 L120 116" stroke="#241708" stroke-width="6" stroke-linecap="round"/>
+      <path d="M126 30 Q182 66 128 104 Z" fill="#F3E6CB" stroke="#241708" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M114 34 Q78 68 112 100 Z" fill="#E2CBA0" stroke="#241708" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M120 20 L150 27 L120 34 Z" fill="#9E2F1E" stroke="#241708" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M44 116 Q120 106 196 116 Q186 152 120 154 Q54 152 44 116 Z"
+            fill="#A66C11" stroke="#241708" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M56 126 Q120 118 184 126" stroke="#241708" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+      <circle cx="94" cy="136" r="6" fill="#F3E6CB" stroke="#241708" stroke-width="3.5"/>
+      <circle cx="120" cy="138" r="6" fill="#F3E6CB" stroke="#241708" stroke-width="3.5"/>
+      <circle cx="146" cy="136" r="6" fill="#F3E6CB" stroke="#241708" stroke-width="3.5"/>
+    </svg>
+</div>
+
+<footer class="foot">
+  <span data-bind="name">—</span>
+  <span>Built to practice on, not to run a business on</span>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Portfolio runtime
+   Content is fetched from /data/*.json so the markup never has to
+   be edited to add a project. Everything rendered from JSON is
+   escaped before it touches the DOM.
+   ═══════════════════════════════════════════════════════════════ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* Escape anything coming from a data file. A portfolio about
+   security should not be trivially XSS-able by its own content. */
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => (
+  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+));
+
+const tags = (arr = []) =>
+  `<div class="tags">${arr.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>`;
+
+/* ── Data loading ───────────────────────────────────────────────── */
+
+function load(name) {
+  // Data is embedded in this file rather than fetched, so the page works
+  // from a double-click with no server and no folder to keep together.
+  const el = document.getElementById(`data-${name}`);
+  if (!el) throw new Error(`missing data block: ${name}`);
+  return JSON.parse(el.textContent);
+}
+
+/* Failure is a moment for direction. The overwhelmingly likely
+   cause is opening index.html via file://, where fetch is blocked. */
+function failed(el, name) {
+  el.innerHTML = `<p class="state state--error">
+    Couldn't read the <code>${esc(name)}</code> section.<br>
+    Check that the <code>data-${esc(name)}</code> block near the top of this
+    file is still valid JSON — a stray comma is the usual cause.
+  </p>`;
+}
+
+/* ── Where the code lives ───────────────────────────────────────
+   The tools sit in this same repo, so the GitHub URL can be worked
+   out from the address bar rather than hardcoded. That way the
+   links keep working whatever the repo ends up being called.
+
+     sherrillbird06.github.io/          -> repo "sherrillbird06.github.io"
+     sherrillbird06.github.io/mysite/   -> repo "mysite"                */
+
+function repoBase() {
+  const host = location.hostname;
+  const gh = host.match(/^([\w-]+)\.github\.io$/);
+  if (gh) {
+    const user = gh[1];
+    const first = location.pathname.split("/").filter(Boolean)[0];
+    // A path segment means a project site; no segment means a user site.
+    const repo = (first && !first.includes(".")) ? first : `${user}.github.io`;
+    return `https://github.com/${user}/${repo}/tree/main/`;
+  }
+  // Opened locally, or hosted somewhere else — fall back to the repo name.
+  return "https://github.com/sherrillbird06/sherrillbird06.github.io/tree/main/";
+}
+
+/* ── Renderers ──────────────────────────────────────────────────── */
+
+function renderProfile(p) {
+  $$("[data-bind]").forEach((el) => {
+    const v = p[el.dataset.bind];
+    if (v) el.textContent = v;
+  });
+  document.title = `${p.name} — training simulators & small tools`;
+
+  const c = p.contact || {};
+  const links = [
+    c.email    && { label: "Email",    href: `mailto:${c.email}` },
+    c.resume   && { label: "Résumé",   href: c.resume },
+    c.github   && { label: "GitHub",   href: c.github },
+    c.linkedin && { label: "LinkedIn", href: c.linkedin },
+  ].filter(Boolean);
+
+  const box = $("#contact-links");
+  if (box) {
+    box.innerHTML = links.map((l, i) =>
+      `<a class="btn ${i === 0 ? "btn--solid" : "btn--ghost"}" href="${esc(l.href)}">${esc(l.label)}</a>`
+    ).join("");
+  }
+}
+
+function renderProjects(list) {
+  $("#projects").innerHTML = list.map((p, i) => `
+    <article class="card reveal">
+      ${cardFish(i)}
+      <div class="card__kicker">${esc(p.kicker)}</div>
+      <h3 class="card__name">${esc(p.name)}</h3>
+      <p class="card__summary">${esc(p.summary)}</p>
+      <div class="card__primitive">${esc(p.primitive)}</div>
+      <ul class="card__list">
+        ${(p.highlights || []).map((h) => `<li>${esc(h)}</li>`).join("")}
+      </ul>
+      ${p.automated ? `<p class="card__auto"><b>Runs on its own:</b> ${esc(p.automated)}</p>` : ""}
+      ${p.beginner ? `<p class="card__why"><b>Why this helps if you're starting out</b>${esc(p.beginner)}</p>` : ""}
+      ${p.repo ? `<div class="card__foot"><a class="link" href="${esc(repoBase() + p.repo)}">Read the code</a></div>` : ""}
+    </article>`).join("");
+}
+
+function renderGames(list) {
+  $("#games-grid").innerHTML = list.map((g, i) => `
+    <article class="card reveal">
+      ${cardFish(i + 2)}
+      <h3 class="card__name">${esc(g.name)}</h3>
+      <p class="card__summary">${esc(g.summary)}</p>
+      ${tags(g.stack)}
+      <div class="card__foot">
+        ${g.play ? `<a class="link" href="${esc(g.play)}">Play</a>` : ""}
+        ${g.repo ? `<a class="link" href="${esc(g.repo)}">Code</a>` : ""}
+      </div>
+    </article>`).join("");
+}
+
+
+/* ── Badly drawn fish ───────────────────────────────────────────
+   Five stages for the tank, and a small one per card. The wobble
+   is deliberate: these are meant to look hand-drawn, not vector.  */
+
+const INK = "#3B2A1A";
+
+function fishSVG({ scale = 1, colour = "#B93A26", mood = "flat" } = {}) {
+  // Mouth shape carries the mood, since the body is always the same fish.
+  const mouths = {
+    sad:  "M212 60 Q206 66 199 62",
+    flat: "M212 61 L200 61",
+    grin: "M210 57 Q205 66 198 58",
+  };
+  return `
+    <g transform="translate(150 62) scale(${scale}) translate(-150 -62)">
+      <path d="M92 62 Q104 34 146 30 Q188 27 210 47 Q219 55 219 62 Q219 69 210 77
+               Q188 97 146 94 Q104 90 92 62 Z"
+            fill="${colour}" stroke="${INK}" stroke-width="4.5" stroke-linejoin="round"/>
+      <path d="M92 62 Q74 44 56 32 Q64 62 56 92 Q74 80 92 62 Z"
+            fill="${colour}" stroke="${INK}" stroke-width="4.5" stroke-linejoin="round"/>
+      <path d="M132 32 Q140 16 156 30" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M130 92 Q138 106 154 91" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="196" cy="52" r="7.5" fill="#F3E6CB" stroke="${INK}" stroke-width="3.5"/>
+      <circle cx="197.5" cy="52.5" r="3" fill="${INK}"/>
+      <path d="${mouths[mood]}" fill="none" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M118 52 Q126 60 118 68" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <path d="M134 50 Q142 60 134 70" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round" opacity=".4"/>
+    </g>`;
+}
+
+const STAGES = [
+  { min: 0,   scale: 0,    colour: "#B93A26", mood: "flat", caption: "nothing on the line yet" },
+  { min: 1,   scale: 0.28, colour: "#B93A26", mood: "sad",  caption: "that's a minnow" },
+  { min: 50,  scale: 0.5,  colour: "#C4841A", mood: "flat", caption: "throwing that one back" },
+  { min: 75,  scale: 0.74, colour: "#256A62", mood: "grin", caption: "now we're fishing" },
+  { min: 100, scale: 1,    colour: "#256A62", mood: "grin", caption: "that's a whopper" },
+];
+
+function drawTankFish(bits) {
+  const g = document.getElementById("tank-fish");
+  const cap = document.getElementById("tank-caption");
+  if (!g) return;
+
+  const stage = [...STAGES].reverse().find((s) => bits >= s.min) || STAGES[0];
+  g.innerHTML = stage.scale === 0 ? "" : fishSVG(stage);
+  if (cap) cap.textContent = stage.caption;
+}
+
+/* One small fish per card, so no two cards look the same. */
+const CARD_FISH = ["#B93A26", "#256A62", "#C4841A", "#7A5A38", "#B93A26"];
+
+function cardFish(i) {
+  const colour = CARD_FISH[i % CARD_FISH.length];
+  // The fish body spans x 56-219, y 16-106. Mirror about x=138 so the
+  // flipped ones land in the same box instead of swimming off the edge.
+  const flip = i % 2 ? ' transform="translate(276 0) scale(-1 1)"' : "";
+  return `<svg class="card__fish" width="82" height="47" viewBox="48 10 182 104"
+               xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g${flip}>
+            ${fishSVG({ colour, mood: i % 3 === 0 ? "grin" : "flat" })}
+          </g></svg>`;
+}
+
+/* ── The meter ──────────────────────────────────────────────────
+   Mirrors PassForge. Pool size is inferred from which character
+   classes appear, then bits = length × log2(pool).             */
+
+const CLASSES = [
+  [/[a-z]/, 26], [/[A-Z]/, 26], [/[0-9]/, 10],
+  [/[ !-/:-@[-`{-~]/, 33],
+];
+
+function entropy(pw) {
+  if (!pw) return { bits: 0, pool: 0, len: 0 };
+  let pool = 0;
+  for (const [re, size] of CLASSES) if (re.test(pw)) pool += size;
+  // Anything outside ASCII (emoji, accents) widens the pool conservatively.
+  if (/[^\x20-\x7E]/.test(pw)) pool += 100;
+  return { bits: pw.length * Math.log2(pool || 1), pool, len: pw.length };
+}
+
+function crackTime(bits) {
+  if (bits <= 0) return "—";
+  // 1e11 guesses/sec — a realistic offline GPU rate against a weak hash.
+  const secs = Math.pow(2, bits - 1) / 1e11;
+  const units = [
+    [1, "seconds"], [60, "minutes"], [3600, "hours"], [86400, "days"],
+    [2629800, "months"], [31557600, "years"], [31557600e3, "millennia"],
+  ];
+  if (secs < 1) return "instant";
+  let out = "instant";
+  for (const [div, name] of units) {
+    const v = secs / div;
+    if (v < 1) break;
+    out = v > 1e6 ? `${v.toExponential(1)} ${name}` : `${v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString()} ${name}`;
+  }
+  return out;
+}
+
+function grade(bits) {
+  if (bits === 0)  return ["none", "Cast a line",  "var(--bark)"];
+  if (bits < 50)   return ["weak", "Too small",    "var(--bobber)"];
+  if (bits < 75)   return ["fair", "Not bad",      "var(--mustard)"];
+  return              ["good", "Keeper",       "var(--teal)"];
+}
+
+function initMeter() {
+  const input = $("#pw");
+  if (!input) return;
+
+  const update = () => {
+    const { bits, pool, len } = entropy(input.value);
+    const [level, label, color] = grade(bits);
+
+    $("#bits").textContent  = bits.toFixed(1);
+    $("#pool").textContent  = pool || "0";
+    $("#len").textContent   = len;
+    $("#crack").textContent = crackTime(bits);
+
+    const v = $("#verdict");
+    v.textContent = label;
+    v.dataset.level = level;
+
+    const fill = $("#fill");
+    fill.style.width = `${Math.min(100, (bits / 100) * 100)}%`;
+    fill.style.background = color;
+
+    drawTankFish(bits);
+  };
+
+  input.addEventListener("input", update);
+  update();
+}
+
+/* ── Scroll reveal ──────────────────────────────────────────────── */
+
+/* ── Ripple ─────────────────────────────────────────────────────
+   A splash where you clicked. Fixed-position and appended to the
+   body rather than inside the button, so it never has to fight the
+   wobbly border-radius or get clipped by overflow. Purely decorative,
+   so it's skipped entirely under reduced motion.               */
+
+function initRipple() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  document.addEventListener("pointerdown", (e) => {
+    const hit = e.target.closest("button, .btn, .link, .nav__links a, .card");
+    if (!hit) return;
+
+    const drop = document.createElement("span");
+    drop.className = "ripple";
+    drop.style.left = e.clientX + "px";
+    drop.style.top = e.clientY + "px";
+    document.body.appendChild(drop);
+    drop.addEventListener("animationend", () => drop.remove(), { once: true });
+  }, { passive: true });
+}
+
+function initReveal() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    $$(".reveal").forEach((el) => el.classList.add("is-in"));
+    return;
+  }
+  if (!("IntersectionObserver" in window)) {
+    $$(".reveal").forEach((el) => el.classList.add("is-in"));
+    return;
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (!e.isIntersecting) return;
+      setTimeout(() => e.target.classList.add("is-in"), i * 70);
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -40px" });
+
+  $$(".reveal").forEach((el) => io.observe(el));
+
+  // Failsafe. An animation that hides content is only acceptable if it
+  // cannot get stuck — print, screenshot tools, and odd viewport sizes
+  // can all leave the observer unfired. Nothing stays invisible.
+  setTimeout(() => $$(".reveal").forEach((el) => el.classList.add("is-in")), 2500);
+}
+
+/* ── Boot ───────────────────────────────────────────────────────── */
+
+function initDock() {
+  const dock = document.getElementById("dock");
+  if (!dock) return;
+
+  // Anyone arriving at a deep link shouldn't have to sit through a boat.
+  if (location.hash && location.hash !== "#top") { dock.remove(); return; }
+
+  let gone = false;
+  const leave = (animate) => {
+    if (gone) return;
+    gone = true;
+    if (!animate) { dock.remove(); return; }
+    dock.classList.add("is-sailing");
+    setTimeout(() => dock.classList.add("is-away"), 620);   // boat clears frame
+    setTimeout(() => dock.remove(), 1700);                  // then the sky goes
+  };
+
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById("setSail").addEventListener("click", () => leave(!reduced));
+  document.getElementById("skipSail").addEventListener("click", () => leave(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") leave(false); });
+
+  document.getElementById("setSail").focus();
+}
+
+const BUILD = "2026-08-23-1928";
+
+(function boot() {
+  console.log("The Tackle Box — build " + BUILD);
+  initDock();
+  initRipple();
+  initMeter();
+
+  const jobs = [
+    ["profile",  renderProfile,  $("#projects")],
+    ["projects", renderProjects, $("#projects")],
+    ["games",    renderGames,    $("#games-grid")],
+  ];
+
+  jobs.forEach(([name, render, errEl]) => {
+    try {
+      render(load(name));
+    } catch (err) {
+      console.error(err);
+      failed(errEl, name);
+    }
+  });
+
+  initReveal();
+})();
+
+</script>
+</body>
+</html>

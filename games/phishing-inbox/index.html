@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phishing Inbox</title>
+<meta name="description" content="Sort real mail from fake and learn what gave each one away.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2213%22%20fill%3D%22%23E2CBA0%22%2F%3E%3Cpath%20d%3D%22M21%2032%20Q29%2018%2044%2022%20Q54%2026%2056%2032%20Q54%2038%2044%2042%20Q29%2046%2021%2032%20Z%22%20fill%3D%22%239E2F1E%22%20stroke%3D%22%23241708%22%20stroke-width%3D%223.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M21%2032%20L9%2021%20Q13%2032%209%2043%20Z%22%20fill%3D%22%239E2F1E%22%20stroke%3D%22%23241708%22%20stroke-width%3D%223.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2229%22%20r%3D%223.2%22%20fill%3D%22%23F3E6CB%22%2F%3E%3C%2Fsvg%3E">
+<meta property="og:title" content="Phishing Inbox">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700;800&family=Cutive+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pine:#E2CBA0; --birch:#F3E6CB; --ink:#241708; --bark:#4E3820;
+  --teal:#1C574F; --bobber:#9E2F1E; --mustard:#A66C11;
+  --display:"Caveat","Bradley Hand","Segoe Print","Ink Free","Comic Sans MS",cursive;
+  --body:"Nunito",system-ui,sans-serif;
+  --mono:"Cutive Mono",ui-monospace,monospace;
+  --wobble:255px 15px 225px 15px/15px 225px 15px 255px;
+  --wobble2:15px 225px 15px 255px/225px 15px 255px 15px;
+}
+*,*::before,*::after{box-sizing:border-box}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{
+  margin:0;font-family:var(--body);color:var(--ink);font-size:17px;line-height:1.6;
+  background-color:var(--pine);
+  background-image:repeating-linear-gradient(91deg,rgba(78,56,32,.06) 0 1px,transparent 1px 6px),
+                   repeating-linear-gradient(89deg,rgba(78,56,32,.04) 0 2px,transparent 2px 17px);
+  min-height:100vh;padding-bottom:3.2rem;
+}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;font-weight:700}
+:focus-visible{outline:3px dashed var(--teal);outline-offset:3px}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+.wrap{max-width:880px;margin:0 auto;padding:1.25rem 1.1rem}
+
+.bar{
+  display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
+  background:var(--birch);border:3px solid var(--ink);border-radius:var(--wobble);
+  padding:.6rem 1rem;box-shadow:4px 4px 0 rgba(36,23,8,.45);margin-bottom:1.1rem;
+}
+.bar__title{font-family:var(--display);font-size:1.5rem;margin-right:auto}
+.pill{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;
+  border:2.5px solid var(--ink);border-radius:999px;padding:.15rem .7rem;background:var(--pine)}
+.pill b{font-family:var(--display);font-size:1.15rem;letter-spacing:0}
+.back{font-family:var(--display);font-size:1.15rem;color:var(--bark);text-decoration:none;border-bottom:2.5px solid var(--bobber)}
+
+.panel{background:var(--birch);border:3px solid var(--ink);border-radius:var(--wobble2);
+  padding:1.4rem;box-shadow:5px 5px 0 rgba(36,23,8,.42);margin-bottom:1.1rem}
+.round{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--bobber);margin-bottom:.2rem}
+
+/* the message itself, styled like a mail client rather than the wood */
+.mail{background:#FDFAF2;border:3px solid var(--ink);border-radius:6px;overflow:hidden;margin-bottom:1rem}
+.mail__head{padding:.85rem 1rem;border-bottom:2.5px dashed #C9B48C;background:#F6EFDF}
+.mail__subject{font-weight:800;font-size:1.05rem;margin-bottom:.45rem;line-height:1.35}
+.hdr{display:grid;grid-template-columns:5.4rem 1fr;gap:.15rem .6rem;font-size:.85rem}
+.hdr dt{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bark);padding-top:.18rem}
+.hdr dd{margin:0;overflow-wrap:anywhere}
+.addr{font-family:var(--mono);font-size:.82rem}
+.mail__body{padding:1rem 1.1rem;font-size:.95rem}
+.mail__body p{margin:0 0 .8rem}
+.mail__body p:last-child{margin-bottom:0}
+.sig{color:var(--bark);font-size:.88rem}
+
+/* links: the whole point is that you have to check where they go */
+.mlink{color:#1A4FA0;text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
+.mlink:hover,.mlink:focus{background:#FFE9A8}
+.attach{
+  display:inline-flex;align-items:center;gap:.4rem;margin-top:.5rem;
+  font-family:var(--mono);font-size:.8rem;border:2.5px solid var(--ink);
+  border-radius:6px;padding:.3rem .6rem;background:#F6EFDF;cursor:pointer;
+}
+.attach:hover{background:#FFE9A8}
+
+/* status bar mimics the browser's link preview */
+.statusbar{
+  position:fixed;left:0;bottom:0;width:100%;z-index:20;
+  background:var(--ink);color:#F3E6CB;font-family:var(--mono);font-size:.78rem;
+  padding:.45rem .9rem;border-top:3px solid var(--bark);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.statusbar span{color:#E8C57A}
+.hint{font-family:var(--mono);font-size:.72rem;color:var(--bark);margin-bottom:.7rem;text-transform:uppercase;letter-spacing:.06em}
+
+.verdict-row{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.4rem}
+.vbtn{
+  border:3px solid var(--ink);border-radius:var(--wobble);padding:.55rem 1.4rem;
+  font-family:var(--display);font-size:1.45rem;box-shadow:4px 4px 0 var(--ink);
+  transition:transform .12s,box-shadow .12s;
+}
+.vbtn:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+.vbtn--phish{background:var(--bobber);color:var(--birch)}
+.vbtn--safe{background:#BFDAD2;color:var(--ink)}
+
+.fb{border:3px dashed var(--ink);border-radius:var(--wobble);padding:1rem 1.2rem;margin-top:1rem;background:#FBF4E4}
+.fb__verdict{font-family:var(--display);font-size:1.8rem;line-height:1.05;margin-bottom:.5rem}
+.fb--good .fb__verdict{color:var(--teal)} .fb--bad .fb__verdict{color:var(--bobber)}
+.tells{list-style:none;margin:0 0 .8rem;padding:0;display:grid;gap:.5rem}
+.tells li{position:relative;padding-left:1.7rem;font-size:.92rem;color:var(--bark)}
+.tells li::before{content:"!";position:absolute;left:0;top:-.1em;width:1.1rem;height:1.1rem;
+  display:grid;place-items:center;font-family:var(--display);font-size:1rem;font-weight:700;
+  color:var(--birch);background:var(--bobber);border-radius:50%}
+.tells li.ok::before{content:"\2713";background:var(--teal)}
+.tells li b{color:var(--ink)}
+
+.next{margin-top:.6rem;background:var(--ink);color:var(--birch);border:3px solid var(--ink);
+  border-radius:var(--wobble);padding:.45rem 1.5rem;font-family:var(--display);font-size:1.4rem;
+  box-shadow:4px 4px 0 var(--bark);transition:transform .12s,box-shadow .12s}
+.next:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--bark)}
+
+.center{text-align:center}
+.intro h1{font-size:clamp(2.6rem,9vw,4.2rem);margin-bottom:.3rem}
+.intro p{color:var(--bark);max-width:54ch;margin:0 auto 1rem}
+.rules{text-align:left;max-width:48ch;margin:0 auto 1.4rem;display:grid;gap:.55rem;padding:0;list-style:none}
+.rules li{position:relative;padding-left:1.6rem;font-size:.95rem;color:var(--bark)}
+.rules li::before{content:"\2713";position:absolute;left:0;top:-.15em;font-family:var(--display);font-size:1.35rem;color:var(--teal)}
+.score-big{font-family:var(--display);font-size:5rem;line-height:1;color:var(--teal)}
+.score-big.low{color:var(--bobber)} .score-big.mid{color:var(--mustard)}
+.review{text-align:left;display:grid;gap:.6rem;margin-top:1.2rem}
+.review__item{border-left:5px solid var(--bobber);padding-left:.85rem;font-size:.92rem;color:var(--bark)}
+.review__item b{color:var(--ink)}
+@media (max-width:560px){
+  body{font-size:16px}
+  .bar__title{font-size:1.2rem;width:100%}
+  .panel{padding:1.05rem}
+  .hdr{grid-template-columns:1fr;gap:0 0}
+  .hdr dt{margin-top:.4rem}
+}
+
+.ripple{
+  position:fixed;z-index:300;pointer-events:none;
+  width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  border:2.5px solid var(--teal);
+  animation:splash .5s cubic-bezier(.2,.7,.4,1) forwards;
+}
+@keyframes splash{from{transform:scale(.4);opacity:.85}to{transform:scale(6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.ripple{display:none}}
+
+.statusbar.is-nudge{background:var(--bobber);animation:shake .5s}
+@keyframes shake{
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+  40%{transform:translateX(7px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+}
+@media (prefers-reduced-motion:reduce){.statusbar.is-nudge{animation:none}}
+.repeat{
+  border:3px solid var(--bobber);background:#F6DCD6;border-radius:var(--wobble);
+  padding:.7rem .9rem;margin-top:1rem;font-size:.9rem;color:var(--ink);text-align:left;
+}
+.repeat b{font-family:var(--display);font-size:1.25rem;display:block;color:var(--bobber);line-height:1.1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="bar">
+    <span class="bar__title">Phishing Inbox</span>
+    <span class="pill">Mail <b id="num">0</b>/<b id="total">0</b></span>
+    <span class="pill">Score <b id="score">0</b></span>
+    <a class="back" href="../../index.html#games">&larr; Portfolio</a>
+  </div>
+
+  <main id="stage" aria-live="polite"></main>
+</div>
+
+<div class="statusbar" id="status" role="status">Hover a link to see where it really goes.</div>
+
+<script>
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════
+   Phishing Inbox
+
+   The core mechanic is the status bar. Every link shows friendly
+   text and points somewhere else, and the only way to tell is to
+   hover it — which is exactly the habit the game is trying to
+   build. Attachments work the same way: hover to see the real
+   full filename, including the second extension.
+   ══════════════════════════════════════════════════════════════ */
+
+const MAIL = [
+  {
+    phish: true,
+    display: "Microsoft 365 Security",
+    address: "security-noreply@rnicrosoft-verify.com",
+    replyTo: "recovery@mail-secure-portal.ru",
+    to: "j.sherrill@company.com",
+    subject: "Action required: your password expires in 24 hours",
+    body: [
+      "We detected unusual sign-in activity on your account. For your protection, your password will expire within 24 hours.",
+      "Please confirm your identity immediately to avoid losing access to your mailbox and files.",
+      { link: "https://login.microsoftonline.com/verify", href: "http://185.220.101.44/o365/session/login.php" },
+      "Failure to respond will result in permanent account suspension.",
+    ],
+    sig: "Microsoft 365 Security Team",
+    tells: [
+      { bad: true, t: "Lookalike domain", d: "rnicrosoft-verify.com uses r-n to fake the m in microsoft. At normal reading size the two are almost identical." },
+      { bad: true, t: "Reply-To goes somewhere else", d: "The message claims to be Microsoft but replies route to mail-secure-portal.ru. This mismatch is one of the strongest single indicators there is." },
+      { bad: true, t: "Link text lies about the destination", d: "It reads login.microsoftonline.com but points at a bare IP address. Real companies do not send you to numbered addresses." },
+      { bad: true, t: "Manufactured deadline", d: "24 hours, permanent suspension, act immediately. Urgency exists to stop you checking." },
+    ],
+    action: "Report it and delete it. If you're worried the warning might be real, open your account settings by typing the address yourself \u2014 never through a link in the message."
+  },
+  {
+    phish: false,
+    display: "Nashville State IT Help Desk",
+    address: "helpdesk@nscc.edu",
+    replyTo: "helpdesk@nscc.edu",
+    to: "j.sherrill@nscc.edu",
+    subject: "Scheduled maintenance this Saturday, 2am to 6am",
+    body: [
+      "The student portal and campus wifi will be unavailable Saturday between 2:00am and 6:00am while we apply updates.",
+      "No action is needed from you. Coursework deadlines falling in that window have been extended by one day automatically.",
+      "If you have questions, call the help desk during business hours at the number on your student ID card.",
+    ],
+    sig: "Nashville State IT",
+    tells: [
+      { bad: false, t: "Sender and Reply-To match", d: "Both are helpdesk@nscc.edu, the real institutional domain." },
+      { bad: false, t: "Asks for nothing", d: "No link, no login, no attachment. It only tells you something." },
+      { bad: false, t: "Points you to a channel you already trust", d: "It says to call the number on your ID card rather than one printed in the email. That's the opposite of what an attacker wants." },
+    ],
+    action: "Nothing to do. This is what a legitimate notice looks like \u2014 informative, no urgency, no credentials requested."
+  },
+  {
+    phish: true,
+    display: "Marcus Whitfield",
+    address: "m.whitfield.exec@gmail.com",
+    replyTo: "m.whitfield.exec@gmail.com",
+    to: "j.sherrill@company.com",
+    subject: "Quick favour \u2014 are you at your desk?",
+    body: [
+      "Jaylen, I'm stuck in back-to-back meetings and can't take calls.",
+      "I need you to pick up six $200 gift cards for the client appreciation thing this afternoon. Expense it and I'll approve it tonight.",
+      "Just scratch the backs and send me photos of the codes as soon as you have them. Keep this between us for now, it's a surprise for the team.",
+      "Sent from my iPhone",
+    ],
+    sig: "Marcus Whitfield, Regional Manager",
+    tells: [
+      { bad: true, t: "Real name, personal address", d: "Whitfield is a genuine manager, but this is a gmail.com account, not the company domain. The display name is free to set to anything." },
+      { bad: true, t: "Gift cards", d: "Gift card requests are almost never legitimate business. They're untraceable and irreversible, which is precisely why this scam persists." },
+      { bad: true, t: "Cannot be reached to verify", d: "\u201cIn meetings, can't take calls\u201d removes the one check that would expose it. That excuse is part of the attack." },
+      { bad: true, t: "Asks for secrecy", d: "\u201cKeep this between us.\u201d Any request that discourages you from asking a colleague should raise the alarm on its own." },
+    ],
+    action: "Do not reply. Verify through a channel you chose yourself \u2014 walk to his desk, or call the number in the company directory. Then report it. This is business email compromise, and it costs organisations more than any other category of phishing."
+  },
+  {
+    phish: true,
+    display: "Accounts Payable",
+    address: "billing@vendor-invoices-portal.com",
+    replyTo: "billing@vendor-invoices-portal.com",
+    to: "j.sherrill@company.com",
+    subject: "Outstanding invoice #INV-88213 \u2014 overdue notice",
+    body: [
+      "Please find attached the overdue invoice for services rendered. Payment is now 30 days past due.",
+      "Open the attached document to review the itemised charges and remittance details.",
+      { attach: "Invoice_88213.pdf", real: "Invoice_88213.pdf.exe" },
+      "This account will be referred to collections if unpaid within 5 business days.",
+    ],
+    sig: "Accounts Payable Department",
+    tells: [
+      { bad: true, t: "Double extension on the attachment", d: "The real filename is Invoice_88213.pdf.exe. Windows hides known extensions by default, so it displays as a PDF. It is a program." },
+      { bad: true, t: "Unknown vendor domain", d: "vendor-invoices-portal.com is a generic name registered to look plausible. Check it against your actual supplier list." },
+      { bad: true, t: "Financial pressure", d: "Overdue, collections, five days. Same urgency pattern, aimed at whoever handles payments." },
+      { bad: true, t: "No specifics you could verify", d: "No purchase order number, no contact name, no prior correspondence referenced." },
+    ],
+    action: "Never open it. Turn on file extensions in Windows Explorer so the .exe is visible \u2014 View, then tick File name extensions. Then report it to IT."
+  },
+  {
+    phish: false,
+    display: "Priya Raman",
+    address: "p.raman@company.com",
+    replyTo: "p.raman@company.com",
+    to: "j.sherrill@company.com",
+    subject: "Re: Thursday handover notes",
+    body: [
+      "Thanks for covering the afternoon queue yesterday. Notes from the handover are on the shared drive under Ops / Handover / March.",
+      "One thing worth flagging: the badge reader by the loading dock has been intermittent all week. I've logged it as TCK-4402 if anyone asks.",
+      "See you Thursday.",
+    ],
+    sig: "Priya",
+    tells: [
+      { bad: false, t: "Internal address, matching Reply-To", d: "Both on company.com, the domain you'd expect from a colleague." },
+      { bad: false, t: "Continues a conversation you were part of", d: "The Re: refers to a real handover, and it references a ticket number you can look up independently." },
+      { bad: false, t: "Points to an internal location, not a link", d: "It describes a folder path on a drive you already have access to instead of sending you to a web page." },
+    ],
+    action: "Ordinary internal mail. Notice that the safest messages tend to reference things you can verify on your own without following anything in the email."
+  },
+  {
+    phish: true,
+    display: "DocuSign",
+    address: "dse@docusign-secure.net",
+    replyTo: "dse@docusign-secure.net",
+    to: "j.sherrill@company.com",
+    subject: "Marcus Whitfield sent you a document to sign",
+    body: [
+      "You have received a document for signature: 2026 Employment Agreement Amendment.",
+      { link: "https://www.docusign.net/signing/start", href: "https://docusign-secure.net.verify-id.co/sign?u=jsherrill" },
+      "This link expires in 48 hours. Do not forward this email \u2014 the signing link is unique to you.",
+    ],
+    sig: "DocuSign Electronic Signature Service",
+    tells: [
+      { bad: true, t: "Domain is not the real one", d: "DocuSign sends from docusign.net or docusign.com. docusign-secure.net is a different domain that merely contains the word." },
+      { bad: true, t: "The real destination hides the brand in a subdomain", d: "docusign-secure.net.verify-id.co is owned by verify-id.co. Everything before the final two parts is decoration \u2014 always read a domain right to left." },
+      { bad: true, t: "Uses a real colleague's name", d: "Naming your actual manager makes it plausible. That detail is often scraped from LinkedIn." },
+      { bad: true, t: "Discourages you from checking", d: "\u201cDo not forward\u201d conveniently stops you asking a colleague whether they got one too." },
+    ],
+    action: "Go to docusign.com yourself and sign in. Any genuine document waiting for you appears in your account. If it isn't there, it was never real."
+  },
+  {
+    phish: false,
+    display: "GitHub",
+    address: "noreply@github.com",
+    replyTo: "noreply@github.com",
+    to: "j.sherrill@company.com",
+    subject: "[GitHub] A new sign-in to your account",
+    body: [
+      "Your account was signed in to from a new device.",
+      "Device: Chrome on Windows. Location: Nashville, TN, United States.",
+      "If this was you, no action is needed. If it wasn't, secure your account:",
+      { link: "https://github.com/settings/security", href: "https://github.com/settings/security" },
+    ],
+    sig: "GitHub Security",
+    tells: [
+      { bad: false, t: "Link text and destination are identical", d: "Hovering shows github.com/settings/security, exactly what it claims. That match is the thing to check every time." },
+      { bad: false, t: "Real domain", d: "github.com with no extra words attached, no hyphens, no lookalike letters." },
+      { bad: false, t: "Describes something you can confirm", d: "The location and browser match your own sign-in, and it doesn't ask you for a password \u2014 it points at a settings page." },
+    ],
+    action: "Safe, and worth reading. Sign-in alerts are how you find out about a compromise early. Even so, the strongest habit is to open the site yourself rather than clicking \u2014 which costs you nothing here."
+  },
+  {
+    phish: true,
+    display: "IT Support",
+    address: "it-support@company-helpdesk.co",
+    replyTo: "it-support@company-helpdesk.co",
+    to: "undisclosed-recipients",
+    subject: "Mailbox storage full \u2014 messages will bounce",
+    body: [
+      "Your mailbox has reached 99% of its storage quota. Incoming messages will be rejected once the limit is exceeded.",
+      "Sign in below to release additional storage. This process takes less than a minute.",
+      { link: "https://company.com/mail/quota", href: "https://company-helpdesk.co/webmail/auth?ref=quota" },
+      "Regards, IT Support",
+    ],
+    sig: "IT Support Desk",
+    tells: [
+      { bad: true, t: "Nearly right domain", d: "company-helpdesk.co is not company.com. Adding a plausible word and changing the ending is the most common trick in the set." },
+      { bad: true, t: "Sent to undisclosed recipients", d: "Real IT tells you about your mailbox individually. A blast to hidden recipients means it's a net, not a message." },
+      { bad: true, t: "Link destination doesn't match", d: "Shown as company.com, actually company-helpdesk.co. Hover before you ever click." },
+      { bad: true, t: "Solves a problem by asking you to log in", d: "Quota warnings from real IT don't route through a sign-in page reached from an email." },
+    ],
+    action: "Report it. Note how mild this one is \u2014 no threats, no money, just a small believable chore. The quiet ones catch more people than the dramatic ones."
+  },
+];
+
+let idx = 0, score = 0, answered = false;
+let inspected = false;      // did they hover anything on this message?
+let nudged = false;         // only interrupt once per session
+const missed = [];
+const missCount = {};       // message index -> times missed across replays
+let runs = 0;
+
+const $ = (id) => document.getElementById(id);
+const stage = $("stage");
+const statusbar = $("status");
+const esc = (s) => String(s).replace(/[&<>"']/g, c => (
+  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+$("total").textContent = MAIL.length;
+
+const IDLE = "Hover a link to see where it really goes.";
+function setStatus(text) { statusbar.innerHTML = text; }
+function resetStatus() { setStatus(IDLE); }
+
+function renderBody(parts) {
+  return parts.map(p => {
+    if (typeof p === "string") return "<p>" + esc(p) + "</p>";
+    if (p.link) {
+      return '<p><a class="mlink" href="#" data-href="' + esc(p.href) +
+             '" onclick="return false">' + esc(p.link) + "</a></p>";
+    }
+    if (p.attach) {
+      return '<p><span class="attach" tabindex="0" data-real="' + esc(p.real) +
+             '">\uD83D\uDCCE ' + esc(p.attach) + "</span></p>";
+    }
+    return "";
+  }).join("");
+}
+
+function wireInspection() {
+  document.querySelectorAll(".mlink").forEach(a => {
+    const show = () => { inspected = true; setStatus("Goes to: <span>" + esc(a.dataset.href) + "</span>"); };
+    a.addEventListener("mouseenter", show);
+    a.addEventListener("focus", show);
+    a.addEventListener("mouseleave", resetStatus);
+    a.addEventListener("blur", resetStatus);
+  });
+  document.querySelectorAll(".attach").forEach(el => {
+    const show = () => { inspected = true; setStatus("Real filename: <span>" + esc(el.dataset.real) + "</span>"); };
+    el.addEventListener("mouseenter", show);
+    el.addEventListener("focus", show);
+    el.addEventListener("mouseleave", resetStatus);
+    el.addEventListener("blur", resetStatus);
+  });
+}
+
+function render() {
+  answered = false;
+  inspected = false;
+  resetStatus();
+  if (idx >= MAIL.length) return results();
+
+  const m = MAIL[idx];
+  $("num").textContent = idx + 1;
+
+  stage.innerHTML =
+    '<section class="panel">' +
+      '<div class="round">Message ' + (idx + 1) + ' of ' + MAIL.length + '</div>' +
+      '<p class="hint">Hover the links and attachments before you decide</p>' +
+      '<div class="mail">' +
+        '<div class="mail__head">' +
+          '<div class="mail__subject">' + esc(m.subject) + '</div>' +
+          '<dl class="hdr">' +
+            '<dt>From</dt><dd>' + esc(m.display) + ' <span class="addr">&lt;' + esc(m.address) + '&gt;</span></dd>' +
+            '<dt>Reply-To</dt><dd class="addr">' + esc(m.replyTo) + '</dd>' +
+            '<dt>To</dt><dd class="addr">' + esc(m.to) + '</dd>' +
+          '</dl>' +
+        '</div>' +
+        '<div class="mail__body">' + renderBody(m.body) +
+          '<p class="sig">' + esc(m.sig) + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="verdict-row">' +
+        '<button class="vbtn vbtn--phish" id="bPhish">Report as phishing</button>' +
+        '<button class="vbtn vbtn--safe" id="bSafe">Mark as safe</button>' +
+      '</div>' +
+      '<div id="fb"></div>' +
+    '</section>';
+
+  wireInspection();
+  $("bPhish").addEventListener("click", () => answer(true));
+  $("bSafe").addEventListener("click", () => answer(false));
+}
+
+function answer(saidPhish) {
+  if (answered) return;
+
+  // The whole point of the game is the habit of checking before deciding.
+  // Interrupt once, the first time someone skips it, then never again.
+  const hasLinks = !!document.querySelector(".mlink, .attach");
+  if (!inspected && !nudged && hasLinks) {
+    nudged = true;
+    statusbar.classList.add("is-nudge");
+    setStatus("You didn't check where anything went. Hover the links, then decide.");
+    setTimeout(() => statusbar.classList.remove("is-nudge"), 600);
+    return;   // give them the chance to actually look
+  }
+
+  answered = true;
+
+  const m = MAIL[idx];
+  const right = saidPhish === m.phish;
+  if (right) { score += 10; $("score").textContent = score; }
+  else {
+    missed.push({ n: idx + 1, subject: m.subject, phish: m.phish, saidPhish: saidPhish });
+    missCount[idx] = (missCount[idx] || 0) + 1;
+  }
+
+  $("bPhish").disabled = true;
+  $("bSafe").disabled = true;
+
+  let verdict;
+  if (right && m.phish)        verdict = "Caught it.";
+  else if (right && !m.phish)  verdict = "Correct \u2014 that one was real.";
+  else if (!right && m.phish)  verdict = "That was phishing. You'd have been caught.";
+  else                         verdict = "False alarm \u2014 that one was legitimate.";
+
+  const extra = (!right && !m.phish)
+    ? "<p style=\"margin-bottom:.8rem;color:var(--bark)\">Reporting real mail isn't a disaster, but a team that " +
+      "over-reports trains everyone to ignore the warnings. Knowing what safe looks like matters as much as spotting the fakes.</p>"
+    : "";
+
+  const last = idx + 1 === MAIL.length;
+
+  $("fb").innerHTML =
+    '<div class="fb fb--' + (right ? "good" : "bad") + '">' +
+      '<div class="fb__verdict">' + esc(verdict) + (right ? "  +10" : "  +0") + '</div>' +
+      extra +
+      '<ul class="tells">' +
+        m.tells.map(t => '<li class="' + (t.bad ? "" : "ok") + '"><b>' + esc(t.t) + '</b> \u2014 ' + esc(t.d) + '</li>').join('') +
+      '</ul>' +
+      '<p style="font-size:.92rem"><b>What to do:</b> ' + esc(m.action) + '</p>' +
+      '<button class="next" id="next">' + (last ? "See your results" : "Next message") + '</button>' +
+    '</div>';
+
+  $("next").addEventListener("click", () => { idx++; render(); });
+  $("next").focus();
+}
+
+function results() {
+  resetStatus();
+  runs++;
+  const max = MAIL.length * 10;
+  const pct = Math.round((score / max) * 100);
+  const band = pct >= 85 ? "" : pct >= 60 ? "mid" : "low";
+  const line = pct >= 85 ? "You'd survive a real campaign."
+             : pct >= 60 ? "Better than most. A couple got past you."
+             : "Worth running again \u2014 read the tells below first.";
+
+  stage.innerHTML =
+    '<section class="panel center">' +
+      '<div class="round">Results</div>' +
+      '<div class="score-big ' + band + '">' + pct + '%</div>' +
+      '<p style="color:var(--bark);margin:.2rem 0 .3rem"><b>' + (score / 10) + '</b> of ' + MAIL.length + ' sorted correctly</p>' +
+      '<h2 style="font-size:1.9rem;margin-bottom:.8rem">' + line + '</h2>' +
+      (missed.length
+        ? '<div class="review"><div class="round" style="text-align:left">These got past you</div>' +
+          missed.map(m => '<div class="review__item"><b>Message ' + m.n + ' \u2014 ' + esc(m.subject) + '</b><br>' +
+            (m.phish ? "This was phishing and you marked it safe." : "This was legitimate and you reported it.") +
+            '</div>').join('') + '</div>'
+        : '<p style="color:var(--teal);font-weight:700">Perfect. Every message sorted correctly.</p>') +
+      repeatBlock() +
+      '<p style="margin-top:1.3rem;color:var(--bark);font-size:.92rem;max-width:50ch;margin-inline:auto">' +
+        'The habit that matters more than any single tell: hover before you click, and when a message asks you ' +
+        'to sign in, open the site yourself instead.</p>' +
+      '<button class="next" id="again" style="margin-top:1.2rem">Try again</button>' +
+      '<p style="margin-top:1rem"><a class="back" href="../../index.html#games">\u2190 Back to portfolio</a></p>' +
+    '</section>';
+
+  $("again").addEventListener("click", () => {
+    idx = 0; score = 0; missed.length = 0; $("score").textContent = "0"; render();
+  });
+}
+
+function repeatBlock() {
+  // Only meaningful once there's history to compare against.
+  const repeats = Object.keys(missCount).filter(k => missCount[k] > 1);
+  if (runs < 2 || !repeats.length) return "";
+  return '<div class="repeat"><b>These keep getting past you</b>' +
+    repeats.map(k => esc(MAIL[k].subject) + " \u2014 missed " + missCount[k] + " times").join("<br>") +
+    '<br><br>Read the tells on those two again before your next run. A tell you miss twice is a habit, not bad luck.</div>';
+}
+
+function intro() {
+  stage.innerHTML =
+    '<section class="panel center intro">' +
+      '<h1>Eight messages</h1>' +
+      '<p>Some are real. Some are trying to get you. Sort each one, and find out immediately what ' +
+      'gave it away \u2014 including the ones you get right.</p>' +
+      '<ul class="rules">' +
+        '<li>Hover any link and the bar at the bottom shows where it actually goes</li>' +
+        '<li>Hover an attachment to see its real full filename</li>' +
+        '<li>Check the From address, not just the display name</li>' +
+        '<li>Read domains right to left \u2014 the end is the part that counts</li>' +
+      '</ul>' +
+      '<button class="next" id="start">Open the inbox</button>' +
+    '</section>';
+  $("start").addEventListener("click", () => { idx = 0; score = 0; missed.length = 0; $("score").textContent = "0"; render(); });
+}
+
+intro();
+
+/* Click ripple, appended to body so it never fights the wobbly
+   borders. Decorative only, so reduced motion skips it. */
+(function ripple(){
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.addEventListener("pointerdown", function (e) {
+    if (!e.target.closest("button, .mlink, .attach, .back")) return;
+    var d = document.createElement("span");
+    d.className = "ripple";
+    d.style.left = e.clientX + "px";
+    d.style.top = e.clientY + "px";
+    document.body.appendChild(d);
+    d.addEventListener("animationend", function(){ d.remove(); }, { once: true });
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

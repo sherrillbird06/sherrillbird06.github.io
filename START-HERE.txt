@@ -1,0 +1,78 @@
+THE TACKLE BOX — how to put this online
+Build 2026-08-23-1928
+════════════════════════════════════════════════════════════
+
+Everything in this folder goes in ONE GitHub repository.
+
+STEP 1  Create a repo at github.com
+        Name it:  sherrillbird06.github.io
+        Set it to Public.
+
+STEP 2  Upload EVERYTHING you see next to this file.
+        Not the folder itself — the contents.
+        Drag them onto the repo page, then Commit changes.
+
+        You should end up with this at the top level:
+
+          index.html
+          resume.pdf
+          games/
+          tools/
+
+        If you see a "deploy" folder in your repo, that's wrong.
+        Delete it and upload the contents instead.
+
+STEP 3  Settings > Pages
+        Source: Deploy from a branch
+        Branch: main    Folder: / (root)
+        Save.
+
+STEP 4  Wait 1-3 minutes.
+        Your site is live at https://sherrillbird06.github.io
+
+That's it. To change anything later, edit index.html on GitHub
+and commit — the site updates itself in about a minute.
+
+
+WHAT'S IN HERE
+════════════════════════════════════════════════════════════
+index.html    The site. All the text lives in three JSON
+              blocks near the top, clearly marked.
+games/        The Help Desk Simulator and Phishing Inbox.
+tools/        Five Python tools. These aren't part of the
+              website — they sit in the repo so the
+              "Read the code" links have somewhere to go.
+resume.pdf    Linked from the Contact section.
+
+
+ONE THING TO DECIDE
+════════════════════════════════════════════════════════════
+The resume PDF has your phone number on it, and uploading it
+makes that public. Plenty of people do this and it's fine —
+but if you'd rather not, delete resume.pdf and remove the
+"resume" line from the contact block inside index.html.
+
+(Your email now matches across the site and the resume:
+ jaylenbaylen@icloud.com)
+
+
+IF YOU NAME THE REPO SOMETHING ELSE
+════════════════════════════════════════════════════════════
+That's fine — the "Read the code" links work out your repo
+name from the address bar automatically. Nothing to edit.
+
+
+CHECKING WHICH VERSION IS LIVE
+════════════════════════════════════════════════════════════
+If the site ever looks broken or unstyled, you're almost
+certainly seeing an old cached copy or a stale upload.
+
+To check: open the live site, press F12, click Console.
+It prints:  The Tackle Box — build 2026-08-23-1928
+
+If it prints nothing, or a different build, do a hard
+refresh:  Ctrl+Shift+R  (Windows)  /  Cmd+Shift+R  (Mac)
+
+If it's still wrong after that, the file in your repo is an
+old one. Delete index.html from the repo and re-upload the
+one from this folder.
